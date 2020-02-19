@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { 
+            font: 12px Arial; 
+            color: cornsilk;
+            background-color: rgb(32, 29, 38);
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>{{ name | safe}}</h1>
+        <h2>{{ ticker | safe}}</h2>
+        <h2>{{ sector | safe}}</h2>
+    </div>
+    
+    <div id="graphDiv" style="width: 600px;">
+        {{ dividends | safe}}
+    </div>
+</body>
+</html>
