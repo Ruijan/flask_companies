@@ -8,12 +8,15 @@ import mpld3
 from mpld3 import plugins
 import numpy as np
 from datetime import datetime
+import pymongo
 
 app = Flask(__name__)
 app.config['MONGO_DBNAME'] = 'finance'
-print(os.environ['MONGO_URI'])
-app.config['MONGO_URI'] = os.environ['MONGO_URI'].strip("'")
+app.config['MONGO_URI'] = os.environ['MONGO_URI'].strip("'").replace('test', app.config['MONGO_DBNAME'])
+print(app.config['MONGO_URI'])
+print(app.config['MONGO_DBNAME'])
 mongo = PyMongo(app)
+cache_df = None
 
 def get_yearly_dvidends(dividends, stock_splits):
   dividend_dates = [datetime.strptime(key, "%b %d, %Y") for key in dividends.keys()]
@@ -59,7 +62,6 @@ def get_dividend_features(dividends, stock_splits, payout_ratio, current_yield):
   data = {"CAGR_1": 0, "CAGR_3": 0, "CAGR_5": 0, "CAGR_10": 0, "Continous Dividend Growth": 0, "Payout_ratio": payout_ratio, "Div. Yield": current_yield, "div_score": 0}
   if isinstance(dividends, dict):
     yearly_dividends = get_yearly_dvidends(dividends, stock_splits)
-    print(yearly_dividends)
     data["CAGR_1"] = get_CAGR(yearly_dividends, 1)
     data["CAGR_3"] = get_CAGR(yearly_dividends, 3)
     data["CAGR_5"] = get_CAGR(yearly_dividends, 5)
@@ -94,20 +96,20 @@ def rate_dividends(data):
 
 @app.route('/')
 def hello():
-    collection = mongo.db.companies
-    print(mongo.db.list_collection_names())
-    a = collection.find({"Country" : "Canada"});
-    df = pd.DataFrame(list(a))
-    print(df)
-    df_an = df[df["Forward Annual Dividend Rate"].notna()]
-    df_an = df_an[df_an["Forward Annual Dividend Rate"].apply(lambda x: not isinstance(x,str))]
-    df_an = df_an[df_an["Trailing P/E"].apply(lambda x: not isinstance(x,str))]
-    df_an = df_an[df_an["Payout Ratio"].apply(lambda x: not isinstance(x,str))]
-    df_an = df_an.reset_index()
-    data = [get_dividend_features(df_an["Dividend History"].values[index], df_an["Stock Splits"].values[index], df_an["Payout Ratio"].values[index], df_an["Forward Annual Dividend Yield"].values[index]) for index in range(len(df_an))]
-    df_an = pd.concat([df_an, pd.DataFrame(data)], axis=1)
+    if cache_df is None:_
+        collection = mongo.db.companies
+        a = collection.find();
+        df = pd.DataFrame(list(a))
+        df_an = df[df["Forward Annual Dividend Rate"].notna()]
+        df_an = df_an[df_an["Forward Annual Dividend Rate"].apply(lambda x: not isinstance(x,str))]
+        df_an = df_an[df_an["Trailing P/E"].apply(lambda x: not isinstance(x,str))]
+        df_an = df_an[df_an["Payout Ratio"].apply(lambda x: not isinstance(x,str))]
+        df_an = df_an.reset_index()
+        data = [get_dividend_features(df_an["Dividend History"].values[index], df_an["Stock Splits"].values[index], df_an["Payout Ratio"].values[index], df_an["Forward Annual Dividend Yield"].values[index]) for index in range(len(df_an))]
+        df_an = pd.concat([df_an, pd.DataFrame(data)], axis=1)
+        cache_df = df_an
     keys = ["Ticker", "Name", "Sector", "Country", "Trailing P/E", "Forward P/E", "PEG Ratio (5 yr expected)",  "CAGR_3", "CAGR_5", "div_score", "Payout Ratio", "Forward Annual Dividend Yield", "5 Year Average Dividend Yield", "Continous Dividend Growth"]
-    html = df_an.sort_values(by=['div_score', "Forward Annual Dividend Yield"], ascending=False)[keys].set_index('Ticker').head(50).to_html()
+    html = cache_df.sort_values(by=['div_score', "Forward Annual Dividend Yield"], ascending=False)[keys].set_index('Ticker').head(50).to_html()
     return html
 
 
