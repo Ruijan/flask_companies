@@ -2,26 +2,58 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/main.css') }}">
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-1.4.0.min.js"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-1.4.0.min.js"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-1.4.0.min.js"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
+    <!-- TO BE REMOVED/> -->
+    <script type="text/javascript" src="../static/js/main.js"></script>
+    <link rel="stylesheet" type="text/css" href="../static/styles/main.css">
 </head>
 <body>
-    <div style="padding:15px;text-align:center;">
-        <h1>Company explorer</h1>
-    </div>
-    <div style="overflow:auto;">
-        <div class="menu"></div>
-        <div class="main_content">
+<div style="padding:15px;text-align:center;">
+    <h1>Company explorer</h1>
+</div>
+<div style="overflow:auto;">
+    <div class="menu"></div>
+    <div class="main_content">
+        <div id="global_info">
             <h1>{{ name | safe}}</h1>
             <h2>{{ ticker | safe}}</h2>
             <h2>{{ sector | safe}}</h2>
+        </div>
+
+        <div id="dividends">
+            <h2>Dividends</h2>
+            <p class="div_score">{{ div_score | safe}}</p>
+            <table id="div_info">
+                <tr>
+                    <th><h3>Div. Yield</h3></th>
+                    <th><h3>3 Years Growth Rate</h3></th>
+                    <th><h3>5 Years Growth Rate</h3></th>
+                    <th><h3>Payout Ratio</h3></th>
+                    <th><h3>Dividend Growth</h3></th>
+                </tr>
+                <tr>
+                    <td><h2>{{ div_yield | safe}}</h2></td>
+                    <td><h2>{{ cagr3 | safe}}</h2></td>
+                    <td><h2>{{ cagr5 | safe}}</h2></td>
+                    <td><h2>{{ payout | safe}}</h2></td>
+                    <td><h2>{{ growth | safe}} Years</h2></td>
+                </tr>
+            </table>
             <div id="graphDiv">
+                {{ script | safe}}
                 {{ dividends | safe}}
             </div>
         </div>
-        <div class="right">
-        </div>
-    </div>   
-    
+    </div>
+    <div class="right">
+    </div>
+</div>
+
 </body>
 </html>
+

@@ -4,6 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/main.css') }}">
+    <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-x.y.z.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-x.y.z.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-x.y.z.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-api-x.y.z.min.js"></script>
 </head>
 <body>
     <div style="padding:15px;text-align:center;">
@@ -14,13 +19,13 @@
             <h2>Filters</h2>
             <form>
                 <label for="country">Country</label>
-                <select>
+                <select id="country">
                     <option>All</option>
                     <option>France</option>
                     <option>United States</option>
                     <option>Canada</option>
                 </select>
-                <button onclick="filterCountry();">Filter</button>
+                <button onclick="filterCountry();" type="button">Filter</button>
             </form>
         </div>
         <div class="main_content">
@@ -31,4 +36,3 @@
     </div>
 </body>
 </html>
-<script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>

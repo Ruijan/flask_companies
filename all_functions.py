@@ -15,7 +15,7 @@ def print_companies_to_html(df):
     df.rename(columns=lambda x: x[0].upper() + x[1:], inplace=True)
     keys = ["Name", "Sector", "Country", "Trailing P/E", "CAGR 3", "CAGR 5", "Payout ratio", "Div. Yield",
             "Continous Dividend Growth", "Div score"]
-    percentage_keys = ["CAGR 3", "CAGR 5", "Payout Ratio", "Div. Yield"]
+    percentage_keys = ["CAGR 3", "CAGR 5", "Payout ratio", "Div. Yield"]
     style = {key: lambda x: "{:20,.2f}%".format(100 * x) for key in percentage_keys}
     data = df.sort_values(by=['Div score', "Div. Yield"], ascending=False)[keys]
     html = data.head(50).to_html(formatters=style, index_names=False)
@@ -32,8 +32,8 @@ def print_companies_to_html(df):
 
 def compute_dividends(row):
     if "Payout Ratio" in row.stats and "Forward Annual Dividend Yield" in row.stats:
-        return get_dividend_features(row.dividend_history, row.stock_splits, \
-                                     row.stats["Payout Ratio"], \
+        return get_dividend_features(row.dividend_history, row.stock_splits,
+                                     row.stats["Payout Ratio"],
                                      row.stats["Forward Annual Dividend Yield"])
     return get_dividend_features(row.dividend_history, row.stock_splits, 0, 0)
 
