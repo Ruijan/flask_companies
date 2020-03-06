@@ -2,23 +2,26 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <style>
-        body { 
-            font: 12px Arial; 
-            color: cornsilk;
-            background-color: rgb(32, 29, 38);
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/main.css') }}">
 </head>
 <body>
-    <div>
-        <h1>{{ name | safe}}</h1>
-        <h2>{{ ticker | safe}}</h2>
-        <h2>{{ sector | safe}}</h2>
+    <div style="padding:15px;text-align:center;">
+        <h1>Company explorer</h1>
     </div>
+    <div style="overflow:auto;">
+        <div class="menu"></div>
+        <div class="main_content">
+            <h1>{{ name | safe}}</h1>
+            <h2>{{ ticker | safe}}</h2>
+            <h2>{{ sector | safe}}</h2>
+            <div id="graphDiv">
+                {{ dividends | safe}}
+            </div>
+        </div>
+        <div class="right">
+        </div>
+    </div>   
     
-    <div id="graphDiv" style="width: 600px;">
-        {{ dividends | safe}}
-    </div>
 </body>
 </html>

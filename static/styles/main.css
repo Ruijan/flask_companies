@@ -1,0 +1,73 @@
+body { 
+    font: 12px Arial; 
+    color: cornsilk;
+    background-color: rgb(32, 29, 38);
+}
+
+.dataframe, .dataframe td, .dataframe th{
+    border-collapse: collapse;
+    border: 0px;
+    text-align: right;
+}
+
+.dataframe thead{
+    font-size: 15px;
+    padding: 5px;
+}
+
+.dataframe tr{
+    height: 35px;
+}
+
+.dataframe tbody tr{
+    cursor: pointer;
+}
+
+.dataframe tbody tr:hover{
+    background-color: dimgrey;
+}
+
+.dataframe td, .dataframe th{
+    padding:5px;
+}
+
+.dataframe tr:nth-child(odd){
+    background: #302E2E;
+}
+
+.dataframe tr:nth-child(even){
+    background: rgb(32, 29, 38);
+}
+
+
+.dataframe tr:nth-child(0){
+    text-align: center;
+}
+
+.main_content {
+    float:left;
+    width:60%;
+    padding:0 20px;
+}
+
+.menu {
+    float:left;
+    width:15%;
+    text-align:center;
+    padding:15px;
+}
+
+.right {
+    float:left;
+    width:15%;
+    padding:15px;
+    margin-top:7px;
+    text-align:center;
+}
+
+@media only screen and (max-width:820px) {
+  /* For mobile phones: */
+  .menu, .main, .right {
+    width:100%;
+  }
+}
