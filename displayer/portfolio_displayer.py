@@ -11,6 +11,9 @@ from bokeh.models import HoverTool
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
 from bokeh.palettes import Spectral6
+import time
+import pycountry
+import ccy
 
 
 def render_portfolio(portfolio, tickers, db_companies, cache):
@@ -25,18 +28,26 @@ def render_portfolio(portfolio, tickers, db_companies, cache):
     summary = dict()
     is_empty = not portfolio["transactions"]
     for txn in portfolio["transactions"]:
-
-        txn_hist = compute_history(cache, portfolio, txn)
-        hist = add_txn_hist(hist, txn_hist)
+        print("Ticker %s" % (txn["ticker"]))
+        start_time = time.time()
         company = db_companies.get(txn["ticker"])
         company["stats"] = dict(
             (k.lower().replace(" ", "_"), v) if isinstance(k, str) else (k, v) for k, v in company["stats"].items())
+        print("company db --- %s seconds ---" % (time.time() - start_time))
+        country = company["country"] if company["country"] != "USA" else "United States"
+        company["currency"] = ccy.countryccy(pycountry.countries.get(name=country).alpha_2.lower())
+        print("Get currency name --- %s seconds ---" % (time.time() - start_time))
         if "cagr_3" not in company or np.isnan(company["cagr_3"]):
             div_info = Series(compute_dividends(company))
             company = {**company, **div_info}
             db_companies.update_company(company)
-        conversion_rate = get_currency_history(cache[txn["ticker"]].info["currency"], portfolio["currency"], cache,
+            print("company db update--- %s seconds ---" % (time.time() - start_time))
+        txn_hist = compute_history(cache, portfolio, txn, company["currency"])
+        hist = add_txn_hist(hist, txn_hist)
+        print("txn history --- %s seconds ---" % (time.time() - start_time))
+        conversion_rate = get_currency_history(company["currency"], portfolio["currency"], cache,
                                                "1d")
+        print("currency hist --- %s seconds ---" % (time.time() - start_time))
         c_div = company["stats"]["forward_annual_dividend_rate"] * txn["shares"] * conversion_rate.values[0]
         dividends += c_div
         net_dividends += get_net_dividend(c_div, company["country"])
@@ -44,8 +55,9 @@ def render_portfolio(portfolio, tickers, db_companies, cache):
         div_5_y += c_div * ((1 + company["cagr_5"]) ** 5)
         payout += company["payout_ratio"] * txn["total"]
         growth += company["continuous_dividend_growth"] * txn["total"]
-        summary = add_transaction_to_summary(c_div, cache, company, summary, txn, txn_hist)
+        summary = add_transaction_to_summary(c_div, company, summary, txn, txn_hist)
         transactions_html = add_transaction_to_table(portfolio["currency"], transactions_html, txn)
+        print("Create variables --- %s seconds ---" % (time.time() - start_time))
     for ticker, position in summary.items():
         position["total_change_perc"] = position["total_change"] / position["total"] * 100
         position["daily_change_perc"] = position["daily_change"] / position["previous_total"] * 100
@@ -84,12 +96,12 @@ def render_portfolio(portfolio, tickers, db_companies, cache):
                            close=close)
 
 
-def add_transaction_to_summary(c_div, cache, company, summary, txn, txn_hist):
+def add_transaction_to_summary(c_div, company, summary, txn, txn_hist):
     if txn["ticker"] not in summary:
         summary[txn["ticker"]] = {"total": 0, "shares": 0, "dividends": 0, "daily_change": 0,
                                   "daily_change_perc": 0, "total_change": 0, "total_change_perc": 0, "previous_total": 0,
                                   "name": txn["name"], "sector": company["sector"], "industry": company["industry"],
-                                  "country": company["country"], "currency": cache[txn["ticker"]].info["currency"]}
+                                  "country": company["country"], "currency": company["currency"]}
     summary[txn["ticker"]]["shares"] += txn["shares"]
     summary[txn["ticker"]]["dividends"] += c_div
     summary[txn["ticker"]]["total"] += txn["total"]
@@ -121,9 +133,7 @@ def format_amount(amount, currency):
 
 
 def get_history(cache, ticker, date, shares, end_date=datetime.now()):
-    if ticker not in cache:
-        cache[ticker] = yf.Ticker(ticker)
-    hist = cache[ticker].history(period="max")
+    hist = cache.get(ticker)
     mask = (hist.index >= date) & (hist.index <= end_date)
     hist = hist.loc[mask]
     hist = hist.drop(["Open", "High", "Low", "Volume", "Stock Splits"], axis=1)
@@ -138,10 +148,7 @@ def get_currency_history(currency, target_currency, cache, period="max"):
         ticker = currency + target_currency + '=X'
         if currency == "USD":
             ticker = target_currency + '=X'
-        if ticker not in cache:
-            cache[ticker] = yf.Ticker(ticker)
-        currency = cache[ticker]
-        return currency.history(period=period)["Close"]
+        return cache.get(ticker)["Close"]
     base = datetime.today()
     date_list = [base - timedelta(days=x) for x in range(max_days)]
     currency = pd.Series(data=[1] * len(date_list), index=date_list)
@@ -255,14 +262,19 @@ def get_portfolio_history_plot(hist):
     return close, script
 
 
-def compute_history(cache, portfolio, txn):
+def compute_history(cache, portfolio, txn, currency):
+    start_time = time.time()
     txn_hist = get_history(cache, txn["ticker"], txn["date"], txn["shares"])
-    currency_hist = get_currency_history(cache[txn["ticker"]].info["currency"], portfolio["currency"], cache)
+    print("Get history --- %s seconds ---" % (time.time() - start_time))
+    currency_hist = get_currency_history(currency, portfolio["currency"], cache)
+    print("Get currency hist--- %s seconds ---" % (time.time() - start_time))
     mask = (currency_hist.index >= np.min(txn_hist.index)) & (currency_hist.index <= datetime.now())
+    print("Create mask --- %s seconds ---" % (time.time() - start_time))
     currency_hist = currency_hist.loc[mask]
     txn_hist["Amount"] = [txn["price"] * txn["shares"]] * len(txn_hist["Close"])
     txn_hist["Close"] = txn_hist["Close"].mul(currency_hist, fill_value=1)
     txn_hist["Dividends"] = txn_hist["Dividends"].mul(currency_hist, fill_value=1)
+    print("Apply mask --- %s seconds ---" % (time.time() - start_time))
     return txn_hist
 
 
@@ -270,6 +282,8 @@ def add_txn_hist(hist, txn_hist):
     if hist.empty:
         hist = txn_hist
     else:
+        new_hist = txn_hist.join(hist, suffixes=('_left', '_right'))
+        new_hist.interpolate(method="pad", inplace=True)
         hist = hist.add(txn_hist, fill_value=0)
     return hist
 

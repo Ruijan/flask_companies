@@ -1,3 +1,6 @@
+import yfinance as yf
+
+
 class HistoryCache(dict):
     __instance = None
 
@@ -12,3 +15,8 @@ class HistoryCache(dict):
             raise Exception("This class is a singleton!")
         else:
             HistoryCache.__instance = self
+
+    def get(self, key):
+        if key not in self:
+            self[key] = yf.Ticker(key).history(period="max")
+        return self[key]
