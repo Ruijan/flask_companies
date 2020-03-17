@@ -21,9 +21,13 @@
                 <label for="country">Country</label>
                 <select id="country">
                     <option>All</option>
-                    <option>France</option>
-                    <option>United States</option>
-                    <option>Canada</option>
+                    {% for feature in countries %}
+                        {% if feature == selected_country %}
+                            <option selected value="{{ feature }}">{{ feature }}</option>
+                        {% else %}
+                            <option value="{{ feature }}">{{ feature }}</option>
+                        {% endif %}
+                    {% endfor %}
                 </select>
                 <button onclick="filterCountry();" type="button">Filter</button>
             </form>

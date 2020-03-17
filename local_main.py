@@ -22,8 +22,7 @@ if __name__ == '__main__':
         "Error_stats": False,
         "Stats.Trailing P/E": {"$not": {"$eq": "N/A"}},
         "Stats.Payout Ratio": {"$not": {"$eq": "N/A"}},
-        "Stats.Forward Annual Dividend Rate": {"$not": {"$eq": "N/A"}},
-        "Country": "France"
+        "Stats.Forward Annual Dividend Rate": {"$not": {"$eq": "N/A"}}
                 }
     df = pd.DataFrame.from_records(collection.find(request_filter))
     print("Collecting --- %s seconds ---" % (time.time() - start_time))
