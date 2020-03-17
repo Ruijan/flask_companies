@@ -23,6 +23,7 @@ def render_portfolio(portfolio, tickers, db_companies, cache):
     growth = 0
     hist = pd.DataFrame()
     summary = dict()
+    is_empty = not portfolio["transactions"]
     for txn in portfolio["transactions"]:
 
         txn_hist = compute_history(cache, portfolio, txn)
@@ -50,29 +51,29 @@ def render_portfolio(portfolio, tickers, db_companies, cache):
         position["daily_change_perc"] = position["daily_change"] / position["previous_total"] * 100
     portfolio_html = get_portfolio_summary_table(summary)
     close, script = get_portfolio_history_plot(hist)
-    diff_price = (hist["Close"].values.flatten() - hist["Amount"].values.flatten()).tolist()
-    daily_change = get_price_change(diff_price, 2, portfolio["total"])
-    week_change = get_price_change(diff_price, 7, portfolio["total"])
-    month_change = get_price_change(diff_price, 30, portfolio["total"])
-    year_change = get_price_change(diff_price, 365, portfolio["total"])
-    total_change = diff_price[-1] / portfolio["total"] * 100
+    diff_price = (hist["Close"].values.flatten() - hist["Amount"].values.flatten()).tolist() if not is_empty else None
+    daily_change = get_price_change(diff_price, 2, portfolio["total"]) if not is_empty else 0
+    week_change = get_price_change(diff_price, 7, portfolio["total"]) if not is_empty else 0
+    month_change = get_price_change(diff_price, 30, portfolio["total"]) if not is_empty else 0
+    year_change = get_price_change(diff_price, 365, portfolio["total"]) if not is_empty else 0
+    total_change = diff_price[-1] / portfolio["total"] * 100 if not is_empty else 0
     return render_template("portfolio.html",
                            name=portfolio["name"],
                            total=format_amount(portfolio["total"], portfolio["currency"]),
                            currency=portfolio["currency"],
                            transactions=transactions_html,
                            portfolio=portfolio_html,
-                           div_yield="{:.2f}%".format(dividends / portfolio["total"] * 100),
+                           div_yield="{:.2f}%".format(dividends / portfolio["total"] * 100) if not is_empty else "- %",
                            annual_div=format_amount(dividends, portfolio["currency"]),
-                           received_div=format_amount(hist["DividendCumSum"][-1], portfolio["currency"]),
-                           net_div_yield="{:.2f}%".format(net_dividends / portfolio["total"] * 100),
+                           received_div=format_amount(hist["DividendCumSum"][-1], portfolio["currency"]) if not is_empty else "-",
+                           net_div_yield="{:.2f}%".format(net_dividends / portfolio["total"] * 100) if not is_empty else "-",
                            net_annual_div=format_amount(net_dividends, portfolio["currency"]),
                            net_received_div=format_amount(hist["DividendCumSum"][-1] * net_dividends / dividends,
-                                                          portfolio["currency"]),
-                           cagr3="{:.2f}%".format(((div_3_y / dividends) ** (1 / 3) - 1) * 100),
-                           cagr5="{:.2f}%".format(((div_5_y / dividends) ** (1 / 5) - 1) * 100),
-                           payout="{:.2f}%".format(payout / portfolio["total"] * 100),
-                           growth="{:.0f}".format(growth / portfolio["total"]),
+                                                          portfolio["currency"]) if not is_empty else "-",
+                           cagr3="{:.2f}%".format(((div_3_y / dividends) ** (1 / 3) - 1) * 100) if not is_empty else "-",
+                           cagr5="{:.2f}%".format(((div_5_y / dividends) ** (1 / 5) - 1) * 100) if not is_empty else "-",
+                           payout="{:.2f}%".format(payout / portfolio["total"] * 100) if not is_empty else "-",
+                           growth="{:.0f}".format(growth / portfolio["total"]) if not is_empty else "-",
                            tickers=tickers.to_dict(),
                            today_change=format_percentage_change(daily_change),
                            week_change=format_percentage_change(week_change),
@@ -207,47 +208,50 @@ def get_price_change(close_prices, days, total):
 
 
 def get_portfolio_history_plot(hist):
-    hist["DividendCumSum"] = hist["Dividends"].cumsum()
-    close = hist["Close"].resample("D").ffill()
-    amount = hist["Amount"].resample("D").ffill()
-    dates = amount.index
-    data = {'Date': dates.to_pydatetime().tolist(),
-                   'Close': close.values.flatten().tolist(),
-                   'Amount': amount.values.flatten().tolist()}
-    p = figure(sizing_mode='scale_width', toolbar_location=None, x_axis_type='datetime',
-               aspect_ratio=1920.0/1080.0)
-    p.toolbar.active_drag = None
-    amount = p.line(x="Date", y="Amount", line_width=5, source=ColumnDataSource(data=data), color=Spectral6[1],
-                    legend_label="Invested")
-    close = p.line(x="Date", y="Close", line_width=5, source=ColumnDataSource(data=data), color=Spectral6[0],
-                   legend_label="Close Price")
-    p.legend.location = "top_left"
-    p.legend.click_policy = "hide"
-    p.legend.background_fill_alpha = 0.0
-    p.legend.border_line_width = 0.0
-    p.legend.label_text_color = "cornsilk"
-    p.add_tools(HoverTool(
-        tooltips=[("Date", "@Date{%F}"), ("Close", " @Close{%0.2f}"), ("Invested", " @Amount{%0.2f}")],
-        formatters={'@Close': 'printf',
-                    '@Date': 'datetime',
-                    '@Amount': 'printf'},
-        mode='vline',
-        renderers=[close]
-    ))
-    p.xgrid.grid_line_color = None
-    p.y_range.start = 0
-    p.background_fill_alpha = 0.
-    p.border_fill_alpha = 0.
-    p.outline_line_alpha = 0.
-    p.xaxis.axis_line_color = "cornsilk"
-    p.xaxis.major_label_text_color = "cornsilk"
-    p.yaxis.axis_line_color = "cornsilk"
-    p.yaxis.major_label_text_color = "cornsilk"
-    p.xaxis.major_tick_line_color = "cornsilk"
-    p.xaxis.major_tick_line_width = 3
-    p.yaxis.major_tick_line_color = "cornsilk"
-    p.yaxis.minor_tick_line_color = None
-    script, close = components(p)
+    close = ""
+    script = ""
+    if hist.shape[0] > 0:
+        hist["DividendCumSum"] = hist["Dividends"].cumsum()
+        close = hist["Close"].resample("D").ffill()
+        amount = hist["Amount"].resample("D").ffill()
+        dates = amount.index
+        data = {'Date': dates.to_pydatetime().tolist(),
+                       'Close': close.values.flatten().tolist(),
+                       'Amount': amount.values.flatten().tolist()}
+        p = figure(sizing_mode='scale_width', toolbar_location=None, x_axis_type='datetime',
+                   aspect_ratio=1920.0/1080.0)
+        p.toolbar.active_drag = None
+        amount = p.line(x="Date", y="Amount", line_width=5, source=ColumnDataSource(data=data), color=Spectral6[1],
+                        legend_label="Invested")
+        close = p.line(x="Date", y="Close", line_width=5, source=ColumnDataSource(data=data), color=Spectral6[0],
+                       legend_label="Close Price")
+        p.legend.location = "top_left"
+        p.legend.click_policy = "hide"
+        p.legend.background_fill_alpha = 0.0
+        p.legend.border_line_width = 0.0
+        p.legend.label_text_color = "cornsilk"
+        p.add_tools(HoverTool(
+            tooltips=[("Date", "@Date{%F}"), ("Close", " @Close{%0.2f}"), ("Invested", " @Amount{%0.2f}")],
+            formatters={'@Close': 'printf',
+                        '@Date': 'datetime',
+                        '@Amount': 'printf'},
+            mode='vline',
+            renderers=[close]
+        ))
+        p.xgrid.grid_line_color = None
+        p.y_range.start = 0
+        p.background_fill_alpha = 0.
+        p.border_fill_alpha = 0.
+        p.outline_line_alpha = 0.
+        p.xaxis.axis_line_color = "cornsilk"
+        p.xaxis.major_label_text_color = "cornsilk"
+        p.yaxis.axis_line_color = "cornsilk"
+        p.yaxis.major_label_text_color = "cornsilk"
+        p.xaxis.major_tick_line_color = "cornsilk"
+        p.xaxis.major_tick_line_width = 3
+        p.yaxis.major_tick_line_color = "cornsilk"
+        p.yaxis.minor_tick_line_color = None
+        script, close = components(p)
     return close, script
 
 

@@ -18,14 +18,14 @@ function computeTotal(currency){
         currency = "USD";
     }
     total_text.textContent = new Intl.NumberFormat('de-DE', { style: 'currency', currency: currency }).format(shares * price);
-}
+};
+
+function disconnect(){
+    window.location.href = "/logout";
+};
 
 Date.prototype.toDateInputValue = (function() {
     var local = new Date(this);
     local.setMinutes(this.getMinutes() - this.getTimezoneOffset());
     return local.toJSON().slice(0,10);
 });
-
-function disconnect(){
-    window.location.href = "/logout";
-};

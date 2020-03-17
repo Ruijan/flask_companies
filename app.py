@@ -42,6 +42,14 @@ if 'MONGO_URI' in os.environ:
     # companies_cache = temp_df
 
 
+def is_user_connected():
+    if session.get("USER") and mongo.db.users.find_one({"email": session["USER"]}) is not None:
+        return True
+    elif session.get("USER"):
+        session.clear()
+    return False
+
+
 @app.route('/')
 def explore_companies():
     global pymongo_connected
@@ -78,7 +86,7 @@ def show_portfolio():
     global mongo
     global tickers
     global history_cache
-    if session.get("USER"):
+    if is_user_connected():
         portfolio = mongo.db.portfolio.find_one({"email": session["USER"]})
         if portfolio is None:
             portfolio = {"email": session["USER"], "name": "My Portfolio", "transactions": [], "total": 0,
@@ -107,7 +115,7 @@ def show_portfolio():
                 mongo.db.portfolio.find_one_and_replace({"email": session["USER"]}, portfolio)
         return render_portfolio(portfolio, tickers, companies_cache, history_cache)
     else:
-        redirect(url_for("login"))
+        return redirect(url_for("login"))
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -148,7 +156,7 @@ def logout():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     global mongo
-    if session.get("USER"):
+    if is_user_connected():
         return redirect(url_for("show_portfolio"))
     if request.method == 'GET':
         return render_template("register.html")
@@ -167,9 +175,9 @@ def register():
             data["last_connection"] = datetime.now()
             mongo.db.users.insert_one(data)
             session["KEY"] = os.environ["MONGO_KEY"]
-            session["USER"] = user
+            session["USER"] = data["email"]
             session.new = True
-            redirect(url_for("show_portfolio"))
+            return redirect(url_for("show_portfolio"))
         else:
             return render_template("login.html", error_login="Email already in database. Try signing in")
 
