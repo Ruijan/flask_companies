@@ -9,6 +9,9 @@
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.0.0.min.js"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
     <!-- TO BE REMOVED/> -->
+    <script>
+        var tickers = {{ tickers|tojson }};
+    </script>
     <script type="text/javascript" src="../static/js/main.js"></script>
     <link rel="stylesheet" type="text/css" href="../static/styles/main.css">
 </head>
@@ -61,6 +64,11 @@
                 </tr>
                 {{ portfolio | safe }}
             </table>
+            <div class="layout">
+                <div class="pie_plot"> {{ sector_pie_script | safe }} {{ sector_pie_plot | safe }} </div>
+                <div class="pie_plot"> {{ industry_pie_script | safe }} {{ industry_pie_plot | safe }}</div>
+                <div class="pie_plot">{{ company_pie_script | safe }} {{ company_pie_plot | safe }}</div>
+            </div>
             <h2>Dividends</h2>
             <p class="div_score">{{ div_score | safe}}</p>
             <table class="div_info">
@@ -95,6 +103,16 @@
                     <td><h2>{{ growth | safe}} Years</h2></td>
                 </tr>
             </table>
+            <div id="graphDiv">
+                {{ div_script | safe }}
+                {{ dividends_plot | safe }}
+            </div>
+            <div class="layout">
+                <div class="pie_plot"> {{ sector_pie_div_script | safe }} {{ sector_pie_div_plot | safe }} </div>
+                <div class="pie_plot"> {{ industry_pie_div_script | safe }} {{ industry_pie_div_plot | safe }}</div>
+                <div class="pie_plot">{{ company_pie_div_script | safe }} {{ company_pie_div_plot | safe }}</div>
+            </div>
+
             <h2>Transactions</h2>
             <table class="dataframe">
                 <tr>
@@ -113,17 +131,17 @@
                     <form id="add_transaction" target="_self" method="post">
                         <input type="text" name="action" hidden=True value="add">
                         <input type="number" disabled name="total" value="0" hidden=True id="total_add">
-                        <td><input type="text" name="ticker" list="tickers" maxlength=10 required=True placeholder="MSFT">
+                        <td><input type="text" name="ticker" list="tickers" maxlength=10 required=True placeholder="MSFT" id="ticker_input" onchange="fill_name(tickers);" autocomplete="off">
                         <datalist id="tickers">
-                            <option value="MSFT">
-                            <option value="T">
-                            <option value="AVGO">
+                            {% for key in tickers.keys() %}
+                                <option value="{{ key }}">{{ key }}</option>
+                            {% endfor %}
                         </datalist></td>
-                        <td><input type="text" name="name" list="names" required placeholder="Microsoft">
+                        <td><input type="text" name="name" list="names" required placeholder="Microsoft" id="name_input" onchange="fill_ticker(tickers);" autocomplete="off">
                         <datalist id="names">
-                            <option value="Microsoft">
-                            <option value="AT&T">
-                            <option value="Broadcom">
+                            {% for value in tickers.values() %}
+                                <option value="{{ value }}">{{ value }}</option>
+                            {% endfor %}
                         </datalist></td>
                         <td><input type="number" name="shares" required placeholder="2" id="shares" onChange="computeTotal('{{ currency }}');"></td>
                         <td><input type="number" name="price_COS" required placeholder="136.54"></td>
@@ -131,7 +149,7 @@
                         <td><input type="number" name="fees" required placeholder="0.15"></td>
                         <td><input type="date" name="date" required placeholder="2000-01-02" value="" id="date_picker"></td>
                         <td id="total_add_text">0.00€</td>
-                        <td><div class="submit_button" onclick="document.getElementById('add_transaction').submit();">ADD</div></td>
+                        <td><div class="submit_button" id="submit_transaction" onclick="add_transaction();">ADD</div></td>
                     </form>
                 </tr>
             </table>

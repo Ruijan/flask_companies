@@ -1,4 +1,6 @@
 import os
+import time
+
 import pandas as pd
 from flask import Flask, session, render_template, redirect, url_for
 from flask_pymongo import PyMongo, request
@@ -8,8 +10,8 @@ from displayer.company_displayer import display_company
 from all_functions import print_companies_to_html
 from cryptography.fernet import Fernet
 from datetime import datetime
-from displayer.portfolio_displayer import render_portfolio
-from cache.history_cache import HistoryCache
+from displayer.portfolio.portfolio_displayer import render_portfolio
+from cache.local_history_cache import LocalHistoryCache
 
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]
@@ -18,7 +20,7 @@ global companies_cache
 global mongo
 global tickers
 global history_cache
-history_cache = HistoryCache()
+
 
 pymongo_connected = False
 if 'MONGO_URI' in os.environ:
@@ -26,8 +28,8 @@ if 'MONGO_URI' in os.environ:
     app.config['MONGO_URI'] = os.environ['MONGO_URI'].strip("'").replace('test', app.config['MONGO_DBNAME'])
     mongo = PyMongo(app)
     pymongo_connected = True
-    collection = mongo.db.cleaned_companies
-    companies_cache = CompaniesCache(collection)
+    companies_cache = CompaniesCache(mongo.db.cleaned_companies)
+    history_cache = LocalHistoryCache(mongo.db.history)
     tickers = pd.DataFrame.from_records(mongo.db.tickers.find())
     # request_filter = {
     #    "error_stats": {"$eq": False},
@@ -82,6 +84,7 @@ def show_company(ticker):
 
 @app.route('/portfolio', methods=['GET', 'POST'])
 def show_portfolio():
+    request_start = time.time()
     global companies_cache
     global mongo
     global tickers
@@ -113,8 +116,11 @@ def show_portfolio():
                     portfolio["total"] -= portfolio["transactions"][index[0]]["total"]
                     portfolio["transactions"].pop(index[0])
                 mongo.db.portfolio.find_one_and_replace({"email": session["USER"]}, portfolio)
-        return render_portfolio(portfolio, tickers, companies_cache, history_cache)
+        element = render_portfolio(portfolio, tickers, companies_cache, history_cache)
+        print("Total request time --- %s seconds ---" % (time.time() - request_start))
+        return element
     else:
+        print("Total request time --- %s seconds ---" % (time.time() - request_start))
         return redirect(url_for("login"))
 
 
