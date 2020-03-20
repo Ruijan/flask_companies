@@ -84,6 +84,7 @@ def render_portfolio(portfolio, tickers, db_companies, cache):
     return render_template("portfolio.html",
                            name=portfolio["name"],
                            total=format_amount(portfolio["total"], portfolio["currency"]),
+                           current=format_amount(portfolio["total"] * (1 + total_change/100.0), portfolio["currency"]),
                            currency=portfolio["currency"],
                            transactions=transactions_html,
                            portfolio=portfolio_html,
@@ -108,22 +109,23 @@ def render_portfolio(portfolio, tickers, db_companies, cache):
                            month_change=format_percentage_change(month_change),
                            year_change=format_percentage_change(year_change),
                            total_change=format_percentage_change(total_change),
-                           script=script,
-                           close=close,
-                           div_script=div_script,
-                           dividends_plot=dividends_plot,
-                           sector_pie_plot=sector_pie_plot,
-                           sector_pie_script=sector_pie_script,
-                           industry_pie_plot=industry_pie_plot,
-                           industry_pie_script=industry_pie_script,
-                           company_pie_plot=company_pie_plot,
-                           company_pie_script=company_pie_script,
-                           sector_pie_div_plot=sector_pie_div_plot,
-                           sector_pie_div_script=sector_pie_div_script,
-                           industry_pie_div_plot=industry_pie_div_plot,
-                           industry_pie_div_script=industry_pie_div_script,
-                           company_pie_div_plot=company_pie_div_plot,
-                           company_pie_div_script=company_pie_div_script
+                           script=script if not is_empty else "",
+                           close=close if not is_empty else "",
+                           div_script=div_script if not is_empty else "",
+                           dividends_plot=dividends_plot if not is_empty else "",
+                           sector_pie_plot=sector_pie_plot if not is_empty else "",
+                           sector_pie_script=sector_pie_script if not is_empty else "",
+                           industry_pie_plot=industry_pie_plot if not is_empty else "",
+                           industry_pie_script=industry_pie_script if not is_empty else "",
+                           company_pie_plot=company_pie_plot if not is_empty else "",
+                           company_pie_script=company_pie_script if not is_empty else "",
+                           sector_pie_div_plot=sector_pie_div_plot if not is_empty else "",
+                           sector_pie_div_script=sector_pie_div_script if not is_empty else "",
+                           industry_pie_div_plot=industry_pie_div_plot if not is_empty else "",
+                           industry_pie_div_script=industry_pie_div_script if not is_empty else "",
+                           company_pie_div_plot=company_pie_div_plot if not is_empty else "",
+                           company_pie_div_script=company_pie_div_script if not is_empty else "",
+                           is_empty=is_empty
                            )
 
 
@@ -136,7 +138,9 @@ def get_pie_plot(summary, field, value):
     data = pd.Series(sectors).sort_values().reset_index(name='value').rename(columns={'index': field})
     data['angle'] = data['value'] / data['value'].sum() * 2 * pi
     nb_colors = len(sectors) if len(sectors) >= 3 else 3
-    data['color'] = RdYlBu[nb_colors]
+    colors = RdYlBu[nb_colors]
+    colors = colors[0:len(sectors)]
+    data['color'] = colors
 
     p = figure(sizing_mode='scale_width', toolbar_location=None,
                tools="hover", tooltips="@" + field + ": @value", x_range=(-1, 3.0), aspect_ratio=1920.0 / 1280)

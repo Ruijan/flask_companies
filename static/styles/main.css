@@ -1,178 +1,238 @@
-body { 
-    font: 12px Arial; 
+body {
+    font: 12px Arial;
     color: cornsilk;
     background-color: rgb(32, 29, 38);
 }
 
-.dataframe input{
+/* Style the tab */
+.tab {
+    overflow: hidden;
+}
+
+/* Style the buttons that are used to open the tab content */
+.tab button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    font-size: 25px;
+    width: 25%;
+    transition: 0.3s;
+    color: cornsilk;
+}
+
+/* Change background color of buttons on hover */
+.tab button:hover {
+    background-color: #98908a;
+    color: cornsilk;
+}
+
+/* Create an active/current tablink class */
+.tab button.active {
+    background-color: #98908a;
+    color: cornsilk;
+}
+
+/* Style the tab content */
+.tabcontent {
+    display: none;
+    padding: 6px 12px;
+    border-top: none;
+}
+
+.dataframe input {
     width: 100%;
 }
 
-.submit_button{
+.submit_button {
     border-radius: 5px;
     background-color: green;
     padding: 5px;
-    text-align:center;
+    text-align: center;
 }
 
-.del_button{
+.del_button {
     border-radius: 5px;
     background-color: red;
     padding: 5px;
-    text-align:center;
+    text-align: center;
 }
 
-.dataframe{
+.dataframe {
     width: 100%;
+    margin-top: 30px;
 }
 
-.dataframe, .dataframe td, .dataframe th{
+.dataframe,
+.dataframe td,
+.dataframe th {
     border-collapse: collapse;
     border: 0px;
     text-align: right;
 }
 
-.dataframe thead{
+.dataframe thead {
     font-size: 15px;
     padding: 5px;
 }
 
-.dataframe tr{
+.dataframe tr {
     height: 35px;
 }
 
-.dataframe tbody tr{
+.dataframe tbody tr {
     cursor: pointer;
 }
 
-.dataframe tbody tr:hover{
+.dataframe tbody tr:hover {
     background-color: dimgrey;
 }
 
-.dataframe td, .dataframe th{
-    padding:5px;
+.dataframe td,
+.dataframe th {
+    padding: 5px;
 }
 
-.dataframe tr:nth-child(odd){
+.dataframe tr:nth-child(odd) {
     background: #302E2E;
 }
 
-.dataframe tr:nth-child(even){
+.dataframe tr:nth-child(even) {
     background: rgb(32, 29, 38);
 }
 
-.dataframe .input_row:nth-child(odd){
+.dataframe .input_row:nth-child(odd) {
     background: #302E2E;
 }
 
-.dataframe .input_row:nth-child(even){
+.dataframe .input_row:nth-child(even) {
     background: #302E2E;
 }
 
-.dataframe tr:nth-child(0){
+.dataframe tr:nth-child(1) {
     text-align: center;
+    font-size: 12pt;
 }
 
 .main_content {
-    float:left;
-    width:80%;
-    padding:0 20px;
+    float: left;
+    width: 80%;
+    padding: 0 20px;
 }
 
 .menu {
-    float:left;
-    width:8%;
-    text-align:center;
-    padding:15px 15px 15px 15px;
+    float: left;
+    width: 8%;
+    text-align: center;
+    padding: 15px 15px 15px 15px;
 }
 
 .right {
-    float:left;
-    width:8%;
-    padding:15px;
-    margin-top:7px;
-    text-align:center;
+    float: left;
+    width: 8%;
+    padding: 15px;
+    margin-top: 7px;
+    text-align: center;
 }
 
-#dividends{
+#dividends {
     background-color: #302E2E;
     padding: 10px;
 }
 
-.div_score{
+.div_score {
     font-size: 30px;
 }
 
-.div_info{
+.div_info {
     width: 100%;
 }
 
-.div_info th, .div_info td{
+.div_info th,
+.div_info td {
     text-align: center;
 }
 
-.negative{
+.negative {
     color: red;
 }
 
-.positive{
+.positive {
     color: lawngreen;
 }
 
-#graphDiv{
+#graphDiv {
     width: 80%;
     margin: auto;
 }
 
-.logout-button{
+.logout-button {
     border-radius: 5px;
     background-color: darkred;
     padding: 10px;
     float: right;
     width: 7.5%;
     text-align: center;
-    color:aliceblue;
+    color: aliceblue;
     cursor: pointer;
 }
 
-.ticker{
+.ticker {
     font-weight: bold;
 }
 
-.title{
-    padding:15px;
-    text-align:center;
+.title {
+    padding: 15px;
+    text-align: center;
 }
 
-.layout{
+.layout {
     margin: auto;
     text-align: center;
 }
 
-.pie_plot{
+.pie_plot {
     width: 49%;
     display: inline-block;
 }
 
+.empty_transaction {
+    text-align: center;
+    font-size: 12pt;
+}
+
 @media only screen and (max-width:720px) {
-  /* For mobile phones: */
-    .menu, .main, .right, .main_content {
-        width:100%;
+
+    /* For mobile phones: */
+    .menu,
+    .main,
+    .right,
+    .main_content {
+        width: 100%;
     }
-    .pie_plot{
+
+    .pie_plot {
         width: 95%;
+    }
+    .tab button {
+        width: 95%;   
     }
 }
 
 @media only screen and (min-width:1420px) {
-  /* For mobile phones: */
+
+    /* For mobile phones: */
     .main_content {
-        width:60%;
+        width: 60%;
     }
+
     .right {
-        width:18%;
+        width: 18%;
     }
+
     .menu {
-        width:18%;
+        width: 18%;
     }
 }
