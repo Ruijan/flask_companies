@@ -29,9 +29,10 @@ function disconnect() {
 
 function add_transaction(tickers) {
     ticker = document.getElementById('ticker_input').value;
-    name = document.getElementById('ticker_input').value;
+    name = document.getElementById('name_input').value;
     if(ticker in tickers && tickers[ticker] == name){
         document.getElementById('submit_transaction').disabled = true;
+        document.getElementById('submit_transaction').style.backgroundColor = "grey";
         document.getElementById('add_transaction').submit();
     }
 }

@@ -20,7 +20,7 @@ from pandas import Series
 from extractor.dividend_extractor import compute_dividends
 
 
-def render_portfolio(portfolio, tickers, db_companies, cache):
+def render_portfolio(portfolio, tickers, db_companies, cache, tab):
     transactions_html = ""
     dividends = 0
     net_dividends = 0
@@ -66,7 +66,7 @@ def render_portfolio(portfolio, tickers, db_companies, cache):
         position["total_change_perc"] = position["total_change"] / position["total"] * 100
         position["daily_change_perc"] = position["daily_change"] / position["previous_total"] * 100
     all_tickers = tickers[["Ticker", "Name"]].set_index("Ticker").to_dict()["Name"]
-    context = {"name": portfolio["name"], "is_empty": is_empty, "tickers": all_tickers}
+    context = {"name": portfolio["name"], "is_empty": is_empty, "tickers": all_tickers, "tab": tab}
     context.update(get_all_price_change(hist, is_empty, portfolio))
     context.update(get_portfolio_info(portfolio, hist, is_empty))
     context.update(get_growth_plot(summary, hist, is_empty))
