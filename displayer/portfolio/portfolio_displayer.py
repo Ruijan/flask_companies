@@ -214,7 +214,7 @@ def add_transaction_to_summary(c_div, company, summary, txn, txn_hist):
 def get_portfolio_summary_table(summary, currency):
     portfolio_html = ""
     for ticker, position in summary.items():
-        portfolio_html += "<tr>"
+        portfolio_html += "<tr onclick='go_to_company(" + ticker + ");'>"
         portfolio_html += "<td class='ticker'>" + ticker + "</td>"
         portfolio_html += "<td>" + position["name"] + "</td>"
         portfolio_html += "<td>" + str(position["shares"]) + "</td>"
