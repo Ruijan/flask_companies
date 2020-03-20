@@ -91,6 +91,7 @@ def show_portfolio():
     global history_cache
     if is_user_connected():
         portfolio = mongo.db.portfolio.find_one({"email": session["USER"]})
+        tab = "Summary"
         if portfolio is None:
             portfolio = {"email": session["USER"], "name": "My Portfolio", "transactions": [], "total": 0,
                          "currency": "EUR", "invested": 0, "id_txn": 0}
@@ -109,6 +110,7 @@ def show_portfolio():
                 portfolio["transactions"].append(data)
                 portfolio["total"] += data["total"]
                 mongo.db.portfolio.find_one_and_replace({"email": session["USER"]}, portfolio)
+                tab = "Transactions"
             elif data["action"] == "del":
                 if "id" in data:
                     index = [index for index in range(len(portfolio["transactions"]))
@@ -116,7 +118,7 @@ def show_portfolio():
                     portfolio["total"] -= portfolio["transactions"][index[0]]["total"]
                     portfolio["transactions"].pop(index[0])
                 mongo.db.portfolio.find_one_and_replace({"email": session["USER"]}, portfolio)
-        element = render_portfolio(portfolio, tickers, companies_cache, history_cache)
+        element = render_portfolio(portfolio, tickers, companies_cache, history_cache, tab)
         print("Total request time --- %s seconds ---" % (time.time() - request_start))
         return element
     else:
