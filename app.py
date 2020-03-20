@@ -76,7 +76,7 @@ def explore_companies():
 @app.route('/screener/<ticker>')
 def show_company(ticker):
     global companies_cache
-    db_company = companies_cache.loc[ticker]
+    db_company = companies_cache.get(ticker)
     if db_company is not None:
         return display_company(db_company, ticker)
     return "No company found"

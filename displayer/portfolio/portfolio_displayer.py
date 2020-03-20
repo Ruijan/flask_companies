@@ -65,66 +65,89 @@ def render_portfolio(portfolio, tickers, db_companies, cache):
     for ticker, position in summary.items():
         position["total_change_perc"] = position["total_change"] / position["total"] * 100
         position["daily_change_perc"] = position["daily_change"] / position["previous_total"] * 100
-    portfolio_html = get_portfolio_summary_table(summary, portfolio["currency"])
-    dividends_plot, div_script = get_portfolio_dividends_plot(hist)
+    all_tickers = tickers[["Ticker", "Name"]].set_index("Ticker").to_dict()["Name"]
+    context = {"name": portfolio["name"], "is_empty": is_empty, "tickers": all_tickers}
+    context.update(get_all_price_change(hist, is_empty, portfolio))
+    context.update(get_portfolio_info(portfolio, hist, is_empty))
+    context.update(get_growth_plot(summary, hist, is_empty))
+    context.update(get_dividends_plots(summary, hist, is_empty))
+    context["portfolio"] = get_portfolio_summary_table(summary, portfolio["currency"])
+    context["transactions"] = transactions_html
+    context.update(
+        get_dividends_info(portfolio, hist, dividends, net_dividends, div_3_y, div_5_y, payout,
+                           growth, is_empty))
+
+    return render_template("portfolio.html", **context)
+
+
+def get_growth_plot(summary, hist, is_empty):
     sector_pie_plot, sector_pie_script = get_pie_plot(summary, "sector", "total")
     industry_pie_plot, industry_pie_script = get_pie_plot(summary, "industry", "total")
     company_pie_plot, company_pie_script = get_pie_plot(summary, "name", "total")
+    close, script = get_portfolio_history_plot(hist)
+    return {"script": script if not is_empty else "",
+            "close": close if not is_empty else "",
+            "sector_pie_plot": sector_pie_plot if not is_empty else "",
+            "sector_pie_script": sector_pie_script if not is_empty else "",
+            "industry_pie_plot": industry_pie_plot if not is_empty else "",
+            "industry_pie_script": industry_pie_script if not is_empty else "",
+            "company_pie_plot": company_pie_plot if not is_empty else "",
+            "company_pie_script": company_pie_script if not is_empty else ""
+            }
+
+
+def get_dividends_plots(summary, hist, is_empty):
+    dividends_plot, div_script = get_portfolio_dividends_plot(hist)
     sector_pie_div_plot, sector_pie_div_script = get_pie_plot(summary, "sector", "dividends")
     industry_pie_div_plot, industry_pie_div_script = get_pie_plot(summary, "industry", "dividends")
     company_pie_div_plot, company_pie_div_script = get_pie_plot(summary, "name", "dividends")
-    close, script = get_portfolio_history_plot(hist)
+    return {"div_script": div_script if not is_empty else "",
+            "dividends_plot": dividends_plot if not is_empty else "",
+            "sector_pie_div_plot": sector_pie_div_plot if not is_empty else "",
+            "sector_pie_div_script": sector_pie_div_script if not is_empty else "",
+            "industry_pie_div_plot": industry_pie_div_plot if not is_empty else "",
+            "industry_pie_div_script": industry_pie_div_script if not is_empty else "",
+            "company_pie_div_plot": company_pie_div_plot if not is_empty else "",
+            "company_pie_div_script": company_pie_div_script if not is_empty else ""}
+
+
+def get_dividends_info(portfolio, hist, dividends, net_dividends, div_3_y, div_5_y, payout, growth, is_empty):
+    return {"div_yield": "{:.2f}%".format(dividends / portfolio["total"] * 100) if not is_empty else "- %",
+            "annual_div": format_amount(dividends, portfolio["currency"]),
+            "received_div": format_amount(hist["DividendCumSum"][-1], portfolio["currency"]) if not is_empty else "-",
+            "net_div_yield": "{:.2f}%".format(net_dividends / portfolio["total"] * 100) if not is_empty else "-",
+            "net_annual_div": format_amount(net_dividends, portfolio["currency"]),
+            "net_received_div": format_amount(hist["DividendCumSum"][-1] * net_dividends / dividends,
+                                              portfolio["currency"]) if not is_empty else "-",
+            "cagr3": "{:.2f}%".format(((div_3_y / dividends) ** (1 / 3) - 1) * 100) if not is_empty else "-",
+            "cagr5": "{:.2f}%".format(((div_5_y / dividends) ** (1 / 5) - 1) * 100) if not is_empty else "-",
+            "payout": "{:.2f}%".format(payout / portfolio["total"] * 100) if not is_empty else "-",
+            "growth": "{:.0f}".format(growth / portfolio["total"]) if not is_empty else "-", }
+
+
+def get_portfolio_info(portfolio, hist, is_empty):
     diff_price = (hist["Close"].values.flatten() - hist["Amount"].values.flatten()).tolist() if not is_empty else None
+    total_change = diff_price[-1] / portfolio["total"] * 100 if not is_empty else 0
+
+    return {"total": format_amount(portfolio["total"], portfolio["currency"]),
+            "current": format_amount(portfolio["total"] * (1 + total_change / 100.0), portfolio["currency"]),
+            "currency": portfolio["currency"]}
+
+
+def get_all_price_change(hist, is_empty, portfolio):
+    diff_price = (hist["Close"].values.flatten() - hist["Amount"].values.flatten()).tolist() if not is_empty else None
+
     daily_change = get_price_change(diff_price, 2, portfolio["total"]) if not is_empty else 0
     week_change = get_price_change(diff_price, 7, portfolio["total"]) if not is_empty else 0
     month_change = get_price_change(diff_price, 30, portfolio["total"]) if not is_empty else 0
     year_change = get_price_change(diff_price, 365, portfolio["total"]) if not is_empty else 0
     total_change = diff_price[-1] / portfolio["total"] * 100 if not is_empty else 0
-    all_tickers = tickers[["Ticker", "Name"]].set_index("Ticker").to_dict()["Name"]
-    return render_template("portfolio.html",
-                           name=portfolio["name"],
-                           total=format_amount(portfolio["total"], portfolio["currency"]),
-                           currency=portfolio["currency"],
-                           transactions=transactions_html,
-                           portfolio=portfolio_html,
-                           div_yield="{:.2f}%".format(dividends / portfolio["total"] * 100) if not is_empty else "- %",
-                           annual_div=format_amount(dividends, portfolio["currency"]),
-                           received_div=format_amount(hist["DividendCumSum"][-1],
-                                                      portfolio["currency"]) if not is_empty else "-",
-                           net_div_yield="{:.2f}%".format(
-                               net_dividends / portfolio["total"] * 100) if not is_empty else "-",
-                           net_annual_div=format_amount(net_dividends, portfolio["currency"]),
-                           net_received_div=format_amount(hist["DividendCumSum"][-1] * net_dividends / dividends,
-                                                          portfolio["currency"]) if not is_empty else "-",
-                           cagr3="{:.2f}%".format(
-                               ((div_3_y / dividends) ** (1 / 3) - 1) * 100) if not is_empty else "-",
-                           cagr5="{:.2f}%".format(
-                               ((div_5_y / dividends) ** (1 / 5) - 1) * 100) if not is_empty else "-",
-                           payout="{:.2f}%".format(payout / portfolio["total"] * 100) if not is_empty else "-",
-                           growth="{:.0f}".format(growth / portfolio["total"]) if not is_empty else "-",
-                           tickers=all_tickers,
-                           today_change=format_percentage_change(daily_change),
-                           week_change=format_percentage_change(week_change),
-                           month_change=format_percentage_change(month_change),
-                           year_change=format_percentage_change(year_change),
-                           total_change=format_percentage_change(total_change),
-                           script=script,
-                           close=close,
-                           div_script=div_script,
-                           dividends_plot=dividends_plot,
-                           sector_pie_plot=sector_pie_plot,
-                           sector_pie_script=sector_pie_script,
-                           industry_pie_plot=industry_pie_plot,
-                           industry_pie_script=industry_pie_script,
-                           company_pie_plot=company_pie_plot,
-                           company_pie_script=company_pie_script,
-                           sector_pie_div_plot=sector_pie_div_plot,
-                           sector_pie_div_script=sector_pie_div_script,
-                           industry_pie_div_plot=industry_pie_div_plot,
-                           industry_pie_div_script=industry_pie_div_script,
-                           company_pie_div_plot=company_pie_div_plot,
-                           company_pie_div_script=company_pie_div_script
-                           )
+
+    return {"today_change": format_percentage_change(daily_change),
+            "month_change": format_percentage_change(month_change),
+            "total_change": format_percentage_change(total_change),
+            "week_change": format_percentage_change(week_change),
+            "year_change": format_percentage_change(year_change)}
 
 
 def get_pie_plot(summary, field, value):
@@ -136,7 +159,9 @@ def get_pie_plot(summary, field, value):
     data = pd.Series(sectors).sort_values().reset_index(name='value').rename(columns={'index': field})
     data['angle'] = data['value'] / data['value'].sum() * 2 * pi
     nb_colors = len(sectors) if len(sectors) >= 3 else 3
-    data['color'] = RdYlBu[nb_colors]
+    colors = RdYlBu[nb_colors]
+    colors = colors[0:len(sectors)]
+    data['color'] = colors
 
     p = figure(sizing_mode='scale_width', toolbar_location=None,
                tools="hover", tooltips="@" + field + ": @value", x_range=(-1, 3.0), aspect_ratio=1920.0 / 1280)
