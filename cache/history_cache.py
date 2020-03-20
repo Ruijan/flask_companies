@@ -35,7 +35,7 @@ class HistoryCache(dict):
             self[key] = {"ticker": key, "last_update": datetime.now(), "history": dict()}
 
         if should_update:
-            history = yf.Ticker(key).history(period="max")
+            history = yf.Ticker(key).history(period="10y")
             self[key]["history"] = history
             self[key]["last_update"] = datetime.now()
             db_company = self[key].copy()
