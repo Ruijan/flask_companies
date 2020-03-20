@@ -135,7 +135,8 @@ def get_pie_plot(summary, field, value):
         sectors[company[field]] += company[value]
     data = pd.Series(sectors).sort_values().reset_index(name='value').rename(columns={'index': field})
     data['angle'] = data['value'] / data['value'].sum() * 2 * pi
-    data['color'] = RdYlBu[len(sectors)]
+    nb_colors = len(sectors) if len(sectors) >= 3 else 3
+    data['color'] = RdYlBu[nb_colors]
 
     p = figure(sizing_mode='scale_width', toolbar_location=None,
                tools="hover", tooltips="@" + field + ": @value", x_range=(-1, 3.0), aspect_ratio=1920.0 / 1280)
