@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/main.css') }}">
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-2.0.0.min.js"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.0.0.min.js"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.0.0.min.js"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
+    <!-- TO BE REMOVED/> -->
+    <script>
+        var tickers = {{tickers | tojson}};
+    </script>
+    <script type="text/javascript" src="../static/js/main.js"></script>
+    <link rel="stylesheet" type="text/css" href="../static/styles/main.css">
+</head>
+
+<body>
+    <div style="overflow:auto;">
+        <div class="menu"></div>
+        <div class="main_content">
+            <div>
+                <div class="logout-button" onclick="disconnect();">Log Out</div>
+                <div class="title">
+                    <h1>Portfolios Dashboard</h1>
+                </div>
+            </div>
+
+
+            <div id="dividends">
+            </div>
+        </div>
+        <div class="right">
+        </div>
+    </div>
+
+</body></html>
+
+<script>
+    document.getElementById('date_picker').value = new Date().toDateInputValue();
+</script>
+
