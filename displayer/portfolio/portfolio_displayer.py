@@ -69,7 +69,8 @@ def render_portfolio(portfolio, tickers, db_companies, cache, tab):
     for ticker, position in summary.items():
         position["total_change_perc"] = position["total_change"] / position["total"] * 100
         position["daily_change_perc"] = position["daily_change"] / position["previous_total"] * 100
-    hist["S&P500"] = ref_hist["Close"]
+    if "Close" in ref_hist:
+        hist["S&P500"] = ref_hist["Close"]
     all_tickers = tickers[["Ticker", "Name"]].set_index("Ticker").to_dict()["Name"]
     context = {"name": portfolio["name"], "is_empty": is_empty, "tickers": all_tickers, "tab": tab}
     context.update(get_all_price_change(hist, is_empty, portfolio))
