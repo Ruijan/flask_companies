@@ -10,7 +10,6 @@
     <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
     <!-- TO BE REMOVED/> -->
     <script>
-        var tickers = {{tickers | tojson}};
     </script>
     <script type="text/javascript" src="../static/js/main.js"></script>
     <link rel="stylesheet" type="text/css" href="../static/styles/main.css">
@@ -18,7 +17,10 @@
 
 <body>
     <div style="overflow:auto;">
-        <div class="menu"></div>
+        <div class="menu">
+            <div onclick="got_to_portfolio_manager()" class="menu_button">Portfolios</div>
+            <div onclick="go_to_screener()" class="menu_button">Screener</div>
+        </div>
         <div class="main_content">
             <div>
                 <div class="logout-button" onclick="disconnect();">Log Out</div>
@@ -27,8 +29,40 @@
                 </div>
             </div>
 
-
             <div id="dividends">
+                {% for portfolio in portfolios %}
+                    <div class="portfolio_button" onclick="show_portfolio('{{ portfolio['name'] }}')">
+                        <h1>{{ portfolio["name"] }}</h1>
+                        Total {{ portfolio["total"] }}<br>
+                            Current {{ portfolio["current"] }}
+                    </div>
+                {% endfor %}
+                <div class="portfolio_add_button" onclick="go_to_portfolio_form()">
+                    <div style="vertical-align: middle; display: table-cell; width: 800px; height: 100px; ">
+                        <h1>Add Portfolio</h1>
+                    </div>
+                </div>
+                <form target="_self" method="post" id="add_portfolio_form" class="hidden">
+                    <table class="large_table">
+                        <tr>
+                            <td><label for="portfolio_name">Portfolio Name:</label></td>
+                            <td><input type="text" value="" name="portfolio_name" id="portfolio_name"></td>
+                        </tr>
+
+                        <tr>
+                            <td><label for="portfolio_currency">Portfolio Currency:</label></td>
+                            <td><select value="" name="portfolio_currency" id="portfolio_currency">
+                                {% for currency in currencies %}
+                                    <option value="{{currency}}" >{{currency}}</option>
+                                {% endfor %}
+                                </select></td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align: center;"><div class="submit_portfolio_button" id="submit_transaction" onclick="add_transaction(tickers);">ADD</div></td>
+                        </tr>
+                    </table>
+
+                </form>
             </div>
         </div>
         <div class="right">
@@ -36,8 +70,9 @@
     </div>
 
 </body></html>
-
 <script>
-    document.getElementById('date_picker').value = new Date().toDateInputValue();
+var should_show = {{ is_portfolio | safe }};
+if (!should_show){
+    document.getElementById("add_portfolio_form").style.display = "block";
+}
 </script>
-

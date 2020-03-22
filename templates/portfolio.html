@@ -18,7 +18,10 @@
 
 <body>
     <div style="overflow:auto;">
-        <div class="menu"></div>
+        <div class="menu">
+            <div onclick="got_to_portfolio_manager()" class="menu_button">Portfolios</div>
+            <div onclick="go_to_screener()" class="menu_button">Screener</div>
+        </div>
         <div class="main_content">
             <div>
                 <div class="logout-button" onclick="disconnect();">Log Out</div>
@@ -40,7 +43,8 @@
                     <h1>{{ name | safe}}</h1>
                     <table class="div_info">
                         <tr><td><h1>Invested</h1></td><td><h1>Current</h1></td><td><h1> Today</h1></td><td><h1>Total</h1></td></tr>
-                        <tr><td><h1>{{ total | safe}}</h1></td><td><h1>{{ current | safe}}</h1></td><td><h1>{{ today_change | safe}}</h1></td><td><h1>{{ total_change | safe}} </h1></td></tr>
+                        <tr><td><h1>{{ total | safe}}</h1></td><td><h1>{{ current | safe}} <br>{{ diff_current_price | safe }}</h1></td><td><h1>{{ today_change | safe}}</h1></td><td><h1>{{ total_change | safe}} </h1></td></tr>
+
                     </table>
                     <table class="dataframe">
                         <tr>
@@ -60,6 +64,11 @@
                         {{ portfolio | safe }}
                         {% endif %}
                     </table>
+                    <div class="layout">
+                        <div class="pie_plot"> {{ sector_pie_script | safe }} {{ sector_pie_plot | safe }} </div>
+                        <div class="pie_plot"> {{ industry_pie_script | safe }} {{ industry_pie_plot | safe }}</div>
+                        <div class="pie_plot">{{ company_pie_script | safe }} {{ company_pie_plot | safe }}</div>
+                    </div>
                 </div>
                 
                 <div id="Growth" class="tabcontent">
@@ -103,29 +112,73 @@
                         {{ script | safe}}
                         {{ close | safe}}
                     </div>
-                    <div class="layout">
-                        <div class="pie_plot"> {{ sector_pie_script | safe }} {{ sector_pie_plot | safe }} </div>
-                        <div class="pie_plot"> {{ industry_pie_script | safe }} {{ industry_pie_plot | safe }}</div>
-                        <div class="pie_plot">{{ company_pie_script | safe }} {{ company_pie_plot | safe }}</div>
-                    </div>
+                    
                 </div>
 
                 <div id="Dividends" class="tabcontent">
                     <p class="div_score">{{ div_score | safe}}</p>
+                    <div id="upcoming_dividends">
+                        <h1>Upcoming Dividends</h1>
+                        <table class="dataframe left">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Ticker</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if upcoming_dividends %}
+                                    {% for dividend in upcoming_dividends %}
+                                        <tr>
+                                            <td> {{dividend["date"]}} days</td>
+                                            <td> {{dividend["ticker"]}} </td>
+                                            <td> {{dividend["amount"]}} </td>
+                                        </tr>
+                                        
+                                    {% endfor %}
+                                {% else %}
+                                    <td colspan="2">No upcoming dividends</td>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                        
+                    </div>
+                    <div class="block_60">
+                        <table class="div_info">
+                            <tr>
+                                <th>
+                                    <h3>Div. Yield</h3>
+                                </th>
+                                <th>
+                                    <h3>Net dividend yield</h3>
+                                </th>
+                                <th>
+                                    <h3>Annual Dividends</h3>
+                                </th>
+                                <th>
+                                    <h3>Net Annual Dividends</h3>
+                                </th>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h2>{{ div_yield | safe}}</h2>
+                                </td>
+                                <td>
+                                    <h2>{{ net_div_yield | safe}}</h2>
+                                </td>
+                                <td>
+                                    <h2>{{ annual_div | safe}}</h2>
+                                </td>
+                                <td>
+                                    <h2>{{ net_annual_div | safe}}</h2>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <h1>History</h1>
                     <table class="div_info">
                         <tr>
-                            <th>
-                                <h3>Div. Yield</h3>
-                            </th>
-                            <th>
-                                <h3>Net dividend yield</h3>
-                            </th>
-                            <th>
-                                <h3>Annual Dividends</h3>
-                            </th>
-                            <th>
-                                <h3>Net Annual Dividends</h3>
-                            </th>
                             <th>
                                 <h3>Received Dividends</h3>
                             </th>
@@ -135,18 +188,6 @@
                         </tr>
                         <tr>
                             <td>
-                                <h2>{{ div_yield | safe}}</h2>
-                            </td>
-                            <td>
-                                <h2>{{ net_div_yield | safe}}</h2>
-                            </td>
-                            <td>
-                                <h2>{{ annual_div | safe}}</h2>
-                            </td>
-                            <td>
-                                <h2>{{ net_annual_div | safe}}</h2>
-                            </td>
-                            <td>
                                 <h2>{{ received_div | safe}}</h2>
                             </td>
                             <td>
@@ -154,40 +195,62 @@
                             </td>
                         </tr>
                     </table>
+                    
+                    <div id="graphDiv">
+                        {{ div_script | safe }}
+                        {{ dividends_plot | safe }}
+                    </div>
+                    <h1>Growth</h1>
                     <table class="div_info">
                         <tr>
+                            <th>
+                                <h3>1 Year Growth Rate</h3>
+                            </th>
                             <th>
                                 <h3>3 Years Growth Rate</h3>
                             </th>
                             <th>
                                 <h3>5 Years Growth Rate</h3>
                             </th>
-                            <th>
-                                <h3>Payout Ratio</h3>
-                            </th>
-                            <th>
-                                <h3>Dividend Growth</h3>
-                            </th>
                         </tr>
                         <tr>
+                            <td>
+                                <h2>{{ cagr1 | safe}}</h2>
+                            </td>
                             <td>
                                 <h2>{{ cagr3 | safe}}</h2>
                             </td>
                             <td>
                                 <h2>{{ cagr5 | safe}}</h2>
                             </td>
+                        </tr>
+                    </table>
+                    <h1>Stability & Security</h1>
+                    <table class="div_info">
+                        <tr>
+                            <th>
+                                <h3>Payout Ratio</h3>
+                            </th>
+                            <th>
+                                <h3>Dividend Growth</h3>
+                            </th>
+                            <th>
+                                <h3>Dividend Growth Stability</h3>
+                            </th>
+                        </tr>
+                        <tr>
+
                             <td>
                                 <h2>{{ payout | safe}}</h2>
                             </td>
                             <td>
                                 <h2>{{ growth | safe}} Years</h2>
                             </td>
+                            <td>
+                                <h2>{{ growth_stability | safe}}</h2>
+                            </td>
                         </tr>
                     </table>
-                    <div id="graphDiv">
-                        {{ div_script | safe }}
-                        {{ dividends_plot | safe }}
-                    </div>
                     <div class="layout">
                         <div class="pie_plot"> {{ sector_pie_div_script | safe }} {{ sector_pie_div_plot | safe }} </div>
                         <div class="pie_plot"> {{ industry_pie_div_script | safe }} {{ industry_pie_div_plot | safe }}</div>
@@ -196,6 +259,7 @@
 
                 </div>
                 <div id="Transactions" class="tabcontent">
+                    <div id="error_add_transaction"></div>
                     <table class="dataframe">
                         <tr>
                             <th>Yahoo Ticker</th>
@@ -208,7 +272,7 @@
                             <th>Total</th>
                             <th></th>
                         </tr>
-                        {{ transactions | safe }}
+                        
                         <tr class="input_row">
                             <form id="add_transaction" target="_self" method="post">
                                 <input type="text" name="action" hidden=True value="add">
@@ -236,6 +300,7 @@
                                 </td>
                             </form>
                         </tr>
+                        {{ transactions | safe }}
                     </table>
                 </div>
             </div>
