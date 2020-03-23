@@ -51,6 +51,7 @@ body {
     background-color: green;
     padding: 5px;
     text-align: center;
+    width: 100%;
 }
 
 .del_button {
@@ -117,16 +118,31 @@ body {
 }
 
 .main_content {
-    float: left;
+    margin: auto;
     width: 80%;
     padding: 0 20px;
 }
 
 .menu {
+    position: fixed;
+    top: 95px;
     float: left;
-    width: 8%;
     text-align: center;
     padding: 15px 15px 15px 15px;
+}
+
+.menu_button{
+    padding: 5px;
+    font-size: 15pt;
+    cursor: pointer;
+}
+
+.menu_button:hover{
+    color: skyblue;
+}
+
+.left td, .left th{
+    text-align: left;
 }
 
 .right {
@@ -140,6 +156,7 @@ body {
 #dividends {
     background-color: #302E2E;
     padding: 10px;
+    min-height: 500px;
 }
 
 .div_score {
@@ -147,6 +164,7 @@ body {
 }
 
 .div_info {
+    table-layout: fixed;
     width: 100%;
 }
 
@@ -203,6 +221,74 @@ body {
     font-size: 12pt;
 }
 
+.portfolio_button {
+    border-radius: 5px;
+    background-color: dimgray;
+    width: 25%;
+    padding: 10px 0px 10px 20px;
+    float: left;
+    margin: 10px;
+    height: 80px;
+    cursor: pointer;
+}
+
+.portfolio_button h1 {
+    margin-bottom: 0px;
+}
+
+.portfolio_add_button {
+    border-radius: 5px;
+    background-color: green;
+    width: 25%;
+    text-align: center;
+    float: left;
+    margin: 10px;
+    height: 100px;
+    cursor: pointer;
+}
+
+#add_portfolio_form {
+    width: 30%;
+    margin: auto;
+}
+
+.large_table {
+    width: 100%;
+}
+
+.submit_portfolio_button {
+    margin: auto;
+    width: 50%;
+    border-radius: 5px;
+    background-color: green;
+    padding: 5px;
+    text-align: center;
+}
+
+.hidden {
+    display: none;
+}
+
+#error_add_transaction {
+    width: 60%;
+    background-color: LightCoral;
+    padding: 10px;
+    border-radius: 10px;
+    text-align: center;
+    margin-bottom: 15px;
+    margin: auto;
+    display: none;
+}
+
+.block_60 {
+    width: 60%;
+}
+
+#upcoming_dividends {
+    float: right;
+    width: 30%;
+}
+
 @media only screen and (max-width:720px) {
 
     /* For mobile phones: */
@@ -216,8 +302,17 @@ body {
     .pie_plot {
         width: 95%;
     }
+
     .tab button {
-        width: 95%;   
+        width: 95%;
+    }
+
+    .block_60 {
+        width: 95%;
+    }
+
+    #upcoming_dividends {
+        float: none;
     }
 }
 
@@ -233,6 +328,7 @@ body {
     }
 
     .menu {
-        width: 18%;
+        width: 10%;
+        margin-left: 8%;
     }
 }

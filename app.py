@@ -4,7 +4,6 @@ import time
 import pandas as pd
 from flask import Flask, session, render_template, redirect, url_for
 from flask_pymongo import PyMongo, request
-
 from cache.companies_cache import CompaniesCache
 from displayer.company_displayer import display_company
 from all_functions import print_companies_to_html
@@ -12,6 +11,8 @@ from cryptography.fernet import Fernet
 from datetime import datetime
 from displayer.portfolio.portfolio_displayer import render_portfolio
 from cache.local_history_cache import LocalHistoryCache
+from cache.currencies import Currencies
+from displayer.portfolio.portfolio_displayer import format_amount
 
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]
@@ -20,7 +21,7 @@ global companies_cache
 global mongo
 global tickers
 global history_cache
-
+global currencies
 
 pymongo_connected = False
 if 'MONGO_URI' in os.environ:
@@ -31,6 +32,7 @@ if 'MONGO_URI' in os.environ:
     companies_cache = CompaniesCache(mongo.db.cleaned_companies)
     history_cache = LocalHistoryCache(mongo.db.history)
     tickers = pd.DataFrame.from_records(mongo.db.tickers.find())
+    currencies = Currencies()
     # request_filter = {
     #    "error_stats": {"$eq": False},
     #    "country": "France"
@@ -54,23 +56,26 @@ def is_user_connected():
 
 @app.route('/')
 def explore_companies():
-    global pymongo_connected
-    html = "Database not connected"
-    current_country = request.args.get("country")
-    if current_country is None:
-        current_country = "All"
-    if pymongo_connected:
-        global companies_cache
-        df = companies_cache.copy()
-        df.reset_index(inplace=True)
-        df = pd.concat([df, pd.DataFrame(list(df["stats"]))], axis=1, sort=False)
-        if current_country != "All":
-            df = df[df.country == current_country]
-        df.set_index("ticker", inplace=True)
-        html = print_companies_to_html(df)
-    return render_template("companies.html", selected_country=current_country,
-                           countries=companies_cache.country.unique(),
-                           dividends=html)
+    if is_user_connected():
+        global pymongo_connected
+        html = "Database not connected"
+        current_country = request.args.get("country")
+        if current_country is None:
+            current_country = "All"
+        if pymongo_connected:
+            global companies_cache
+            df = companies_cache.copy()
+            df.reset_index(inplace=True)
+            df = pd.concat([df, pd.DataFrame(list(df["stats"]))], axis=1, sort=False)
+            if current_country != "All":
+                df = df[df.country == current_country]
+            df.set_index("ticker", inplace=True)
+            html = print_companies_to_html(df)
+        return render_template("companies.html", selected_country=current_country,
+                               countries=companies_cache.country.unique(),
+                               dividends=html)
+    else:
+        return redirect(url_for("login"))
 
 
 @app.route('/screener/<ticker>')
@@ -82,6 +87,41 @@ def show_company(ticker):
     return "No company found"
 
 
+@app.route('/portfolios-manager', methods=['GET', 'POST'])
+def show_portfolio_manager():
+    if is_user_connected():
+        if request.method == 'POST':
+            data = request.form.to_dict(flat=True)
+            portfolio = mongo.db.portfolio.find_one({"email": session["USER"], "name": data["name"]})
+            if portfolio is None:
+                portfolio = {"email": session["USER"], "name": data["name"], "transactions": [], "total": 0,
+                             "currency": data["currency"], "invested": 0, "id_txn": 0}
+                mongo.db.portfolio.insert_one(portfolio)
+                return redirect(url_for("show_portfolio", name=data["name"]))
+            else:
+                return display_portfolios_manager()
+        else:
+            return display_portfolios_manager()
+    else:
+        return redirect(url_for("login"))
+
+
+def display_portfolios_manager():
+    global currencies
+    portfolios = list(mongo.db.portfolio.find({"email": session["USER"]}))
+    is_portfolio = len(portfolios)
+    for portfolio in portfolios:
+        portfolio["total"] = format_amount(portfolio["total"], portfolio["currency"])
+        if "current" in portfolio:
+            portfolio["current"] = format_amount(portfolio["current"], portfolio["currency"])
+        else:
+            portfolio["current"] = portfolio["total"]
+    keys = sorted(list(currencies.keys()))
+    return render_template("portfolios_manager.html", portfolios=portfolios,
+                           is_portfolio=is_portfolio,
+                           currencies=keys)
+
+
 @app.route('/portfolio', methods=['GET', 'POST'])
 def show_portfolio():
     request_start = time.time()
@@ -90,12 +130,11 @@ def show_portfolio():
     global tickers
     global history_cache
     if is_user_connected():
-        portfolio = mongo.db.portfolio.find_one({"email": session["USER"]})
+        portfolio_name = request.args.get("name")
+        portfolio = mongo.db.portfolio.find_one({"email": session["USER"], "name": portfolio_name})
         tab = "Summary"
         if portfolio is None:
-            portfolio = {"email": session["USER"], "name": "My Portfolio", "transactions": [], "total": 0,
-                         "currency": "EUR", "invested": 0, "id_txn": 0}
-            mongo.db.portfolio.insert_one(portfolio)
+            return redirect(url_for("show_portfolio_manager"))
         if request.method == 'POST':
             data = request.form.to_dict(flat=True)
             if data["action"] == "add":
@@ -118,7 +157,7 @@ def show_portfolio():
                     portfolio["total"] -= portfolio["transactions"][index[0]]["total"]
                     portfolio["transactions"].pop(index[0])
                 mongo.db.portfolio.find_one_and_replace({"email": session["USER"]}, portfolio)
-        element = render_portfolio(portfolio, tickers, companies_cache, history_cache, tab)
+        element = render_portfolio(portfolio, tickers, companies_cache, history_cache, tab, mongo.db.portfolio)
         print("Total request time --- %s seconds ---" % (time.time() - request_start))
         return element
     else:

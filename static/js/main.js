@@ -2,6 +2,19 @@ function showCompany(ticker) {
     window.location.href = "/screener/" + ticker;
 }
 
+function show_portfolio(portfolio_name){
+    window.location.href = "/portfolio?name=" + portfolio_name;
+}
+
+function got_to_portfolio_manager(){
+    window.location.href = "/portfolios-manager";
+}
+
+function got_to_screener(){
+    window.location.href = "/";
+}
+
+
 function filterCountry() {
     var e = document.getElementById("country");
     var country = e.options[e.selectedIndex].value;
@@ -28,12 +41,36 @@ function disconnect() {
 }
 
 function add_transaction(tickers) {
-    ticker = document.getElementById('ticker_input').value;
-    name = document.getElementById('name_input').value;
-    if(ticker in tickers && tickers[ticker] == name){
-        document.getElementById('submit_transaction').disabled = true;
-        document.getElementById('submit_transaction').style.backgroundColor = "grey";
-        document.getElementById('add_transaction').submit();
+    if(document.getElementById('add_transaction').reportValidity()){    
+        ticker = document.getElementById('ticker_input').value;
+        name = document.getElementById('name_input').value;
+        if(ticker in tickers && tickers[ticker] == name){
+            document.getElementById('submit_transaction').disabled = true;
+            document.getElementById('submit_transaction').style.backgroundColor = "grey";
+            document.getElementById('add_transaction').submit();
+        }
+        else{
+            error_div = document.getElementById("error_add_transaction");
+            error_div.style.display = "block";
+            error_div.innerHTML = "Error: Ticker and Name do not match.";
+        }
+    }
+}
+
+function add_portfolio(currencies){
+    if(document.getElementById('add_portfolio_form').reportValidity()){
+        currency = document.getElementById('portfolio_currency').value;
+        alert(currency in currencies);
+        if(currencies.includes(currency)){
+            document.getElementById('submit_portfolio').disabled = true;
+            document.getElementById('submit_portfolio').style.backgroundColor = "grey";
+            document.getElementById('add_portfolio_form').submit();
+        }
+        else{
+            error_div = document.getElementById("error_add_transaction");
+            error_div.style.display = "block";
+            error_div.innerHTML = "Error: Currency " + currency + " does not exists.";
+        }
     }
 }
 
@@ -45,6 +82,12 @@ function fill_name(tickers) {
 function fill_ticker(tickers) {
     name = document.getElementById('name_input').value;
     document.getElementById('ticker_input').value = getKeyByValue(tickers, name);
+}
+
+function go_to_portfolio_form(){
+    var elmnt = document.getElementById("add_portfolio_form");
+    elmnt.style.display = "block";
+    elmnt.scrollIntoView();
 }
 
 function getKeyByValue(object, value) {

@@ -11,7 +11,6 @@ from babel.numbers import format_currency
 from bokeh.embed import components
 from bokeh.models import ColumnDataSource
 from bokeh.models import HoverTool
-from bokeh.palettes import RdYlBu
 from bokeh.palettes import Accent6
 from bokeh.plotting import figure
 from bokeh.transform import cumsum
@@ -21,10 +20,12 @@ from pandas import Series
 from extractor.dividend_extractor import compute_dividends
 
 
-def render_portfolio(portfolio, tickers, db_companies, cache, tab):
+def render_portfolio(portfolio, tickers, db_companies, cache, tab, db_portfolio):
+    start_time = time.time()
     transactions_html = ""
     dividends = 0
     net_dividends = 0
+    div_1_y = 0
     div_3_y = 0
     div_5_y = 0
     payout = 0
@@ -34,11 +35,13 @@ def render_portfolio(portfolio, tickers, db_companies, cache, tab):
     is_empty = not portfolio["transactions"]
     ref_hist = pd.DataFrame()
     for txn in portfolio["transactions"]:
-        print("Ticker %s" % (txn["ticker"]))
+        transaction_time = time.time()
+        print("---- Ticker %s" % (txn["ticker"]))
         ref_txn = txn.copy()
         ref_txn["ticker"] = "^GSPC"
         ref_txn["shares"] = 1
         company = db_companies.get(txn["ticker"])
+        print("---- Get company --- %s seconds ---" % (time.time() - transaction_time))
         company["stats"] = dict(
             (k.lower().replace(" ", "_"), v) if isinstance(k, str) else (k, v) for k, v in company["stats"].items())
         country = company["country"] if company["country"] != "USA" else "United States"
@@ -47,19 +50,28 @@ def render_portfolio(portfolio, tickers, db_companies, cache, tab):
             div_info = Series(compute_dividends(company))
             company = {**company, **div_info}
             db_companies.update_company(company)
+            print("---- Update company --- %s seconds ---" % (time.time() - transaction_time))
         txn_hist = compute_history(cache, portfolio["currency"], txn, company["currency"])
+        print("---- Get company history --- %s seconds ---" % (time.time() - transaction_time))
         ref_txn_hist = compute_history(cache, portfolio["currency"], ref_txn, "USD")
-        ref_txn["shares"] = ref_txn["total"] / ref_txn_hist["Close"].values[0]
+        print("---- Get S&P500 --- %s seconds ---" % (time.time() - transaction_time))
+        if len(ref_txn_hist["Close"]) > 0:
+            ref_txn["shares"] = ref_txn["total"] / ref_txn_hist["Close"].values[0]
+        else:
+            ref_txn["shares"] = 0
         ref_txn_hist["Close"] *= ref_txn["shares"]
         ref_txn_hist["Amount"] = ref_txn["total"]
         ref_txn_hist["Net_Dividends"] = ref_txn_hist["Dividends"].apply(get_net_dividend, args=("USA",))
         txn_hist["Net_Dividends"] = txn_hist["Dividends"].apply(get_net_dividend, args=(company["country"],))
         hist = add_txn_hist(hist, txn_hist)
         ref_hist = add_txn_hist(ref_hist, ref_txn_hist)
-        conversion_rate = get_currency_history(company["currency"], portfolio["currency"], cache, "1d")
-        c_div = company["stats"]["forward_annual_dividend_rate"] * txn["shares"] * conversion_rate.values[-1]
+        print("---- Add txn history --- %s seconds ---" % (time.time() - transaction_time))
+        conversion_rate = get_current_conversion_rate(company["currency"], portfolio["currency"], cache)
+        print("---- Get currency rate --- %s seconds ---" % (time.time() - transaction_time))
+        c_div = company["stats"]["forward_annual_dividend_rate"] * txn["shares"] * conversion_rate
         dividends += c_div
         net_dividends += get_net_dividend(c_div, company["country"])
+        div_1_y += c_div * ((1 + company["cagr_1"]) ** 1)
         div_3_y += c_div * ((1 + company["cagr_3"]) ** 3)
         div_5_y += c_div * ((1 + company["cagr_5"]) ** 5)
         payout += company["payout_ratio"] * txn["total"]
@@ -69,21 +81,67 @@ def render_portfolio(portfolio, tickers, db_companies, cache, tab):
     for ticker, position in summary.items():
         position["total_change_perc"] = position["total_change"] / position["total"] * 100
         position["daily_change_perc"] = position["daily_change"] / position["previous_total"] * 100
-    if "Close" in ref_hist:
+    update_portfolio(db_portfolio, hist, is_empty, portfolio)
+    if not is_empty:
         hist["S&P500"] = ref_hist["Close"]
+    print("Collecting data --- %s seconds ---" % (time.time() - start_time))
     all_tickers = tickers[["Ticker", "Name"]].set_index("Ticker").to_dict()["Name"]
-    context = {"name": portfolio["name"], "is_empty": is_empty, "tickers": all_tickers, "tab": tab}
-    context.update(get_all_price_change(hist, is_empty, portfolio))
-    context.update(get_portfolio_info(portfolio, hist, is_empty))
-    context.update(get_growth_plot(summary, hist, is_empty))
-    context.update(get_dividends_plots(summary, hist, is_empty))
-    context["portfolio"] = get_portfolio_summary_table(summary, portfolio["currency"])
-    context["transactions"] = transactions_html
-    context.update(
-        get_dividends_info(portfolio, hist, dividends, net_dividends, div_3_y, div_5_y, payout,
-                           growth, is_empty))
+    context = get_context(all_tickers, div_1_y, div_3_y, div_5_y, dividends, growth, hist, is_empty, net_dividends,
+                          payout,
+                          portfolio, summary, tab, transactions_html)
+    print("Generate figures and plots --- %s seconds ---" % (time.time() - start_time))
 
     return render_template("portfolio.html", **context)
+
+
+def get_context(all_tickers, div_1_y, div_3_y, div_5_y, dividends, growth, hist, is_empty, net_dividends, payout,
+                portfolio,
+                summary, tab, transactions_html):
+    start_time = time.time()
+
+    context = {"name": portfolio["name"], "is_empty": is_empty, "tickers": all_tickers, "tab": tab}
+    context.update(get_all_price_change(hist, is_empty, portfolio))
+    print("---- Get price change --- %s seconds ---" % (time.time() - start_time))
+    context.update(get_portfolio_info(portfolio, hist, is_empty))
+    print("---- Get Portfolio info --- %s seconds ---" % (time.time() - start_time))
+    context.update(get_growth_plot(summary, hist, is_empty))
+    print("---- Get Growth plots --- %s seconds ---" % (time.time() - start_time))
+    context.update(get_dividends_plots(summary, hist, is_empty))
+    print("---- Get dividends plots --- %s seconds ---" % (time.time() - start_time))
+    context["portfolio"] = get_portfolio_summary_table(summary, portfolio["currency"])
+    print("---- Get summary table --- %s seconds ---" % (time.time() - start_time))
+    context["upcoming_dividends"] = get_upcoming_dividends(summary, portfolio["currency"])
+    print("---- Get upcoming dividends table --- %s seconds ---" % (time.time() - start_time))
+    context["transactions"] = transactions_html
+    context.update(
+        get_dividends_info(portfolio, hist, dividends, net_dividends, div_1_y, div_3_y, div_5_y, payout,
+                           growth, is_empty))
+    print("---- Get dividends info --- %s seconds ---" % (time.time() - start_time))
+    return context
+
+
+def get_upcoming_dividends(summary, currency):
+    upcoming_dividends = [{"ticker": key,
+                           "amount": format_currency(position["dividends"], currency, locale='en_US'),
+                           "date": (position["ex_dividend_date"] - datetime.today()).days}
+                          for key, position in summary.items() if (position["ex_dividend_date"] - datetime.today()).days > 0]
+    upcoming_dividends = sorted(upcoming_dividends, key=lambda x: x["date"])
+    return upcoming_dividends
+
+
+def update_portfolio(db_portfolio, hist, is_empty, portfolio):
+    portfolio_changed = False
+    new_total = hist["Amount"].values[-1] if not is_empty else 0
+    diff_price = (hist["Close"].values.flatten() - hist["Amount"].values.flatten()).tolist() if not is_empty else None
+    new_current = new_total + diff_price[-1] if not is_empty else 0
+    if new_total != portfolio["total"]:
+        portfolio["total"] = new_total
+        portfolio_changed = True
+    if "current" not in portfolio or new_current != portfolio["current"]:
+        portfolio["current"] = new_current
+        portfolio_changed = True
+    if portfolio_changed:
+        db_portfolio.find_one_and_replace({"email": portfolio["email"], "name": portfolio["name"]}, portfolio)
 
 
 def get_growth_plot(summary, hist, is_empty):
@@ -117,7 +175,15 @@ def get_dividends_plots(summary, hist, is_empty):
             "company_pie_div_script": company_pie_div_script if not is_empty else ""}
 
 
-def get_dividends_info(portfolio, hist, dividends, net_dividends, div_3_y, div_5_y, payout, growth, is_empty):
+def get_dividends_info(portfolio, hist, dividends, net_dividends, div_1_y, div_3_y, div_5_y, payout, growth, is_empty):
+    growth_stability_str = "Highly variable"
+    growth_stability = np.std([div_1_y, div_3_y, div_5_y] * 100)
+    if growth_stability < 2.5:
+        growth_stability_str = "Very Stable"
+    elif growth_stability < 5:
+        growth_stability_str = "Stable"
+    elif growth_stability < 10:
+        growth_stability_str = "Unstable"
     return {"div_yield": "{:.2f}%".format(dividends / portfolio["total"] * 100) if not is_empty else "- %",
             "annual_div": format_amount(dividends, portfolio["currency"]),
             "received_div": format_amount(hist["DividendCumSum"][-1], portfolio["currency"]) if not is_empty else "-",
@@ -125,18 +191,17 @@ def get_dividends_info(portfolio, hist, dividends, net_dividends, div_3_y, div_5
             "net_annual_div": format_amount(net_dividends, portfolio["currency"]),
             "net_received_div": format_amount(hist["DividendCumSum"][-1] * net_dividends / dividends,
                                               portfolio["currency"]) if not is_empty else "-",
+            "cagr1": "{:.2f}%".format(((div_1_y / dividends) ** (1 / 3) - 1) * 100) if not is_empty else "-",
             "cagr3": "{:.2f}%".format(((div_3_y / dividends) ** (1 / 3) - 1) * 100) if not is_empty else "-",
             "cagr5": "{:.2f}%".format(((div_5_y / dividends) ** (1 / 5) - 1) * 100) if not is_empty else "-",
             "payout": "{:.2f}%".format(payout / portfolio["total"] * 100) if not is_empty else "-",
-            "growth": "{:.0f}".format(growth / portfolio["total"]) if not is_empty else "-", }
+            "growth": "{:.0f}".format(growth / portfolio["total"]) if not is_empty else "-",
+            "growth_stability": growth_stability_str}
 
 
 def get_portfolio_info(portfolio, hist, is_empty):
-    diff_price = (hist["Close"].values.flatten() - hist["Amount"].values.flatten()).tolist() if not is_empty else None
-    total_change = diff_price[-1] / portfolio["total"] * 100 if not is_empty else 0
-
     return {"total": format_amount(portfolio["total"], portfolio["currency"]),
-            "current": format_amount(portfolio["total"] * (1 + total_change / 100.0), portfolio["currency"]),
+            "current": format_amount(portfolio["current"], portfolio["currency"]),
             "currency": portfolio["currency"]}
 
 
@@ -148,21 +213,25 @@ def get_all_price_change(hist, is_empty, portfolio):
     month_change = get_price_change(diff_price, 30, portfolio["total"]) if not is_empty else 0
     year_change = get_price_change(diff_price, 365, portfolio["total"]) if not is_empty else 0
     total_change = diff_price[-1] / portfolio["total"] * 100 if not is_empty else 0
-
+    diff_current_price = diff_price[-1] if not is_empty else 0
     return {"today_change": format_percentage_change(daily_change),
             "month_change": format_percentage_change(month_change),
             "total_change": format_percentage_change(total_change),
             "week_change": format_percentage_change(week_change),
-            "year_change": format_percentage_change(year_change)}
+            "year_change": format_percentage_change(year_change),
+            "diff_current_price": format_price_change(diff_current_price, portfolio["currency"])}
 
 
 def get_pie_plot(summary, field, value):
+    start_time = time.time()
     sectors = {}
     for ticker, company in summary.items():
         if company[field] not in sectors:
             sectors[company[field]] = 0
         sectors[company[field]] += company[value]
+    print("---- ---- Get price change --- %s seconds ---" % (time.time() - start_time))
     data = pd.Series(sectors).sort_values().reset_index(name='value').rename(columns={'index': field})
+    print("---- ---- Create series --- %s seconds ---" % (time.time() - start_time))
     data['angle'] = data['value'] / data['value'].sum() * 2 * pi
     colors = [Color("white")]
     if len(sectors) > 1:
@@ -179,20 +248,22 @@ def get_pie_plot(summary, field, value):
         colors = blue_gradient + red_gradient[1:]
     colors = [color.hex for color in colors]
     data['color'] = colors
-
+    print("---- ---- Generate colors --- %s seconds ---" % (time.time() - start_time))
     p = figure(sizing_mode='scale_width', toolbar_location=None,
                tools="hover", tooltips="@" + field + ": @value", x_range=(-1, 3.0), aspect_ratio=1920.0 / 1280)
 
     r = p.annular_wedge(x=0, y=1, inner_radius=0.65, outer_radius=1, direction="anticlock",
                         start_angle=cumsum('angle', include_zero=True), end_angle=cumsum('angle'),
                         line_color="white", fill_color='color', source=data, legend_field=field)
-
+    print("---- ---- Create figure --- %s seconds ---" % (time.time() - start_time))
     p.axis.axis_label = None
     p.axis.visible = False
     p.grid.grid_line_color = None
     prettify_plot(p)
     p.legend.location = "center_right"
+    print("---- ---- Prettify --- %s seconds ---" % (time.time() - start_time))
     script, dividends = components(p)
+    print("---- ---- Create components --- %s seconds ---" % (time.time() - start_time))
     return dividends, script
 
 
@@ -207,9 +278,13 @@ def add_transaction_to_summary(c_div, company, summary, txn, txn_hist):
     summary[txn["ticker"]]["dividends"] += c_div
     summary[txn["ticker"]]["total"] += txn["total"]
     previous_amount = (txn_hist["Close"][-2] if txn_hist.shape[0] > 1 else txn["total"])
-    summary[txn["ticker"]]["daily_change"] += txn_hist["Close"][-1] - previous_amount
+    if (datetime.today() - txn_hist.index[-1]).days >= 1:
+        summary[txn["ticker"]]["daily_change"] += 0
+    else:
+        summary[txn["ticker"]]["daily_change"] += txn_hist["Close"][-1] - previous_amount
     summary[txn["ticker"]]["previous_total"] += previous_amount
     summary[txn["ticker"]]["total_change"] += txn_hist["Close"][-1] - txn["total"]
+    summary[txn["ticker"]]["ex_dividend_date"] = company["stats"]["ex-dividend_date"]
 
 
 def get_portfolio_summary_table(summary, currency):
@@ -220,7 +295,7 @@ def get_portfolio_summary_table(summary, currency):
         portfolio_html += "<td>" + position["name"] + "</td>"
         portfolio_html += "<td>" + str(position["shares"]) + "</td>"
         portfolio_html += "<td>" + format_amount(position["dividends"] / position["shares"], currency) + \
-                          " ({:.2f}%".format(position["dividends"] / position["total"]*100) + ")</td>"
+                          " ({:.2f}%".format(position["dividends"] / position["total"] * 100) + ")</td>"
         portfolio_html += "<td>" + format_price_change(position["daily_change"], currency) + " (" + \
                           format_percentage_change(position["daily_change_perc"]) + ")" + "</td>"
         portfolio_html += "<td>" + format_price_change(position["total_change"], currency) + " (" + \
@@ -235,24 +310,35 @@ def format_amount(amount, currency):
 
 
 def get_history(cache, ticker, date, shares, end_date=datetime.now()):
-    hist = cache.get(ticker)
-    mask = (hist.index >= date) & (hist.index <= end_date)
-    hist = hist.loc[mask]
+    hist = cache.get(ticker, date, end_date)
     hist = hist.drop(["Open", "High", "Low", "Volume", "Stock Splits"], axis=1)
     hist["Dividends"] *= shares
     hist["Close"] *= shares
     return hist
 
 
-def get_currency_history(currency, target_currency, cache, period="10y"):
-    max_days = get_max_days_from_string(period)
+def get_currency_ticker(currency, target_currency):
+    ticker = currency
     if currency != target_currency:
         ticker = currency + target_currency + '=X'
         if currency == "USD":
             ticker = target_currency + '=X'
-        return cache.get(ticker)["Close"]
+    return ticker
+
+
+def get_current_conversion_rate(currency, target_currency, cache):
+    ticker = get_currency_ticker(currency, target_currency)
+    if ticker != currency:
+        return cache.get_last_day(ticker)["Close"]
+    return 1
+
+
+def get_currency_history(currency, target_currency, cache, start_date, end_date):
+    ticker = get_currency_ticker(currency, target_currency)
+    if ticker != currency:
+        return cache.get(ticker, start_date, end_date)["Close"]
     base = datetime.today()
-    date_list = [base - timedelta(days=x) for x in range(max_days)]
+    date_list = [base - timedelta(days=x) for x in range((end_date - start_date).days)]
     currency = pd.Series(data=[1] * len(date_list), index=date_list)
     return currency
 
@@ -434,13 +520,19 @@ def get_portfolio_history_plot(hist):
 
 
 def compute_history(cache, portfolio_currency, txn, currency):
-    txn_hist = get_history(cache, txn["ticker"], datetime.strptime(txn["date"], "%Y-%m-%d"), txn["shares"])
-    currency_hist = get_currency_history(currency, portfolio_currency, cache)
+    start_time = time.time()
+    start_date = datetime.strptime(txn["date"], "%Y-%m-%d")
+    txn_hist = get_history(cache, txn["ticker"], start_date, txn["shares"])
+    print("---- ---- Get company history --- %s seconds ---" % (time.time() - start_time))
+    currency_hist = get_currency_history(currency, portfolio_currency, cache, start_date, datetime.now())
+    print("---- ---- Get currency history --- %s seconds ---" % (time.time() - start_time))
     mask = (currency_hist.index >= np.min(txn_hist.index)) & (currency_hist.index <= datetime.now())
     currency_hist = currency_hist.loc[mask]
+    print("---- ---- Apply mask --- %s seconds ---" % (time.time() - start_time))
     txn_hist["Amount"] = [txn["price"] * txn["shares"]] * len(txn_hist["Close"])
     txn_hist["Close"] = txn_hist["Close"].mul(currency_hist, fill_value=1)
     txn_hist["Dividends"] = txn_hist["Dividends"].mul(currency_hist, fill_value=1)
+    print("---- ---- Set history to currency --- %s seconds ---" % (time.time() - start_time))
     return txn_hist
 
 
