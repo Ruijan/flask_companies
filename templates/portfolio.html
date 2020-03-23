@@ -10,157 +10,306 @@
     <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
     <!-- TO BE REMOVED/> -->
     <script>
-        var tickers = {{ tickers|tojson }};
+        var tickers = {{tickers | tojson}};
     </script>
     <script type="text/javascript" src="../static/js/main.js"></script>
     <link rel="stylesheet" type="text/css" href="../static/styles/main.css">
 </head>
+
 <body>
-<div style="overflow:auto;">
-    <div class="menu"></div>
-    <div class="main_content">
-        <div>
-            <div class="logout-button" onclick="disconnect();">Log Out</div>
-            <div class="title"><h1>Portfolio Dashboard</h1></div>
+    <div style="overflow:auto;">
+        <div class="menu">
+            <div onclick="got_to_portfolio_manager()" class="menu_button">Portfolios</div>
+            <div onclick="go_to_screener()" class="menu_button">Screener</div>
         </div>
-
-
-        <div id="dividends">
-            <div id="global_info">
-                <h1>{{ name | safe}}</h1>
-                <h1>{{ total | safe}}</h1>
-                <h2>Growth</h2>
-                <table class="div_info">
-                    <tr>
-                        <th><h3>Today</h3></th>
-                        <th><h3>Last Week</h3></th>
-                        <th><h3>Last month</h3></th>
-                        <th><h3>Last Year</h3></th>
-                        <th><h3>Total</h3></th>
-                    </tr>
-                    <tr>
-                        <td><h1>{{ today_change | safe}}</h1></td>
-                        <td><h1>{{ week_change | safe}}</h1></td>
-                        <td><h1>{{ month_change | safe}}</h1></td>
-                        <td><h1>{{ year_change | safe}}</h1></td>
-                        <td><h1>{{ total_change | safe}}</h1></td>
-                    </tr>
-                </table>
-                <div id="graphDiv">
-                    {{ script | safe}}
-                    {{ close | safe}}
+        <div class="main_content">
+            <div>
+                <div class="logout-button" onclick="disconnect();">Log Out</div>
+                <div class="title">
+                    <h1>Portfolio Dashboard</h1>
                 </div>
             </div>
-            <h2>Summary</h2>
-            <table class="dataframe">
-                <tr>
-                    <th>Yahoo Ticker</th>
-                    <th>Name</th>
-                    <th>Shares</th>
-                    <th>Daily Change (%)</th>
-                    <th>Total Change (%)</th>
-                    <th>Total</th>
-                    <th></th>
-                </tr>
-                {{ portfolio | safe }}
-            </table>
-            <div class="layout">
-                <div class="pie_plot"> {{ sector_pie_script | safe }} {{ sector_pie_plot | safe }} </div>
-                <div class="pie_plot"> {{ industry_pie_script | safe }} {{ industry_pie_plot | safe }}</div>
-                <div class="pie_plot">{{ company_pie_script | safe }} {{ company_pie_plot | safe }}</div>
-            </div>
-            <h2>Dividends</h2>
-            <p class="div_score">{{ div_score | safe}}</p>
-            <table class="div_info">
-                <tr>
-                    <th><h3>Div. Yield</h3></th>
-                    <th><h3>Net dividend yield</h3></th>
-                    <th><h3>Annual Dividends</h3></th>
-                    <th><h3>Net Yearly Dividends</h3></th>
-                    <th><h3>Received Dividends</h3></th>
-                    <th><h3>Received Net Dividends</h3></th>
-                </tr>
-                <tr>
-                    <td><h2>{{ div_yield | safe}}</h2></td>
-                    <td><h2>{{ net_div_yield | safe}}</h2></td>
-                    <td><h2>{{ annual_div | safe}}</h2></td>
-                    <td><h2>{{ net_annual_div | safe}}</h2></td>
-                    <td><h2>{{ received_div | safe}}</h2></td>
-                    <td><h2>{{ net_received_div | safe}}</h2></td>
-                </tr>
-            </table>
-            <table class="div_info">
-                <tr>
-                    <th><h3>3 Years Growth Rate</h3></th>
-                    <th><h3>5 Years Growth Rate</h3></th>
-                    <th><h3>Payout Ratio</h3></th>
-                    <th><h3>Dividend Growth</h3></th>
-                </tr>
-                <tr>
-                    <td><h2>{{ cagr3 | safe}}</h2></td>
-                    <td><h2>{{ cagr5 | safe}}</h2></td>
-                    <td><h2>{{ payout | safe}}</h2></td>
-                    <td><h2>{{ growth | safe}} Years</h2></td>
-                </tr>
-            </table>
-            <div id="graphDiv">
-                {{ div_script | safe }}
-                {{ dividends_plot | safe }}
-            </div>
-            <div class="layout">
-                <div class="pie_plot"> {{ sector_pie_div_script | safe }} {{ sector_pie_div_plot | safe }} </div>
-                <div class="pie_plot"> {{ industry_pie_div_script | safe }} {{ industry_pie_div_plot | safe }}</div>
-                <div class="pie_plot">{{ company_pie_div_script | safe }} {{ company_pie_div_plot | safe }}</div>
-            </div>
 
-            <h2>Transactions</h2>
-            <table class="dataframe">
-                <tr>
-                    <th>Yahoo Ticker</th>
-                    <th>Name</th>
-                    <th>Shares</th>
-                    <th>Price per Share (COS)</th>
-                    <th>Price per Share in {{ currency | safe}}</th>
-                    <th>Fees</th>
-                    <th>Date</th>
-                    <th>Total</th>
-                    <th></th>
-                </tr>
-                {{ transactions | safe }}
-                <tr class="input_row">
-                    <form id="add_transaction" target="_self" method="post">
-                        <input type="text" name="action" hidden=True value="add">
-                        <input type="number" disabled name="total" value="0" hidden=True id="total_add">
-                        <td><input type="text" name="ticker" list="tickers" maxlength=10 required=True placeholder="MSFT" id="ticker_input" onchange="fill_name(tickers);" autocomplete="off">
-                        <datalist id="tickers">
-                            {% for key in tickers.keys() %}
-                                <option value="{{ key }}">{{ key }}</option>
-                            {% endfor %}
-                        </datalist></td>
-                        <td><input type="text" name="name" list="names" required placeholder="Microsoft" id="name_input" onchange="fill_ticker(tickers);" autocomplete="off">
-                        <datalist id="names">
-                            {% for value in tickers.values() %}
-                                <option value="{{ value }}">{{ value }}</option>
-                            {% endfor %}
-                        </datalist></td>
-                        <td><input type="number" name="shares" required placeholder="2" id="shares" onChange="computeTotal('{{ currency }}');"></td>
-                        <td><input type="number" name="price_COS" required placeholder="136.54"></td>
-                        <td><input type="number" name="price" required placeholder="125.13" id="price" onChange="computeTotal('{{ currency }}');"></td>
-                        <td><input type="number" name="fees" required placeholder="0.15"></td>
-                        <td><input type="date" name="date" required placeholder="2000-01-02" value="" id="date_picker"></td>
-                        <td id="total_add_text">0.00€</td>
-                        <td><div class="submit_button" id="submit_transaction" onclick="add_transaction();">ADD</div></td>
-                    </form>
-                </tr>
-            </table>
+
+            <div id="dividends">
+                <div class="tab">
+                    <button class="tablinks active" onclick="openTab(event, 'Summary')">Summary</button>
+                    <button class="tablinks" onclick="openTab(event, 'Growth')">Growth</button>
+                    <button class="tablinks" onclick="openTab(event, 'Dividends')">Dividends</button>
+                    <button class="tablinks" onclick="openTab(event, 'Transactions')">Transactions</button>
+                </div>
+                <!-- Tab content -->
+                <div id="Summary" class="tabcontent" style="display: block;">
+                    <h1>{{ name | safe}}</h1>
+                    <table class="div_info">
+                        <tr><td><h1>Invested</h1></td><td><h1>Current</h1></td><td><h1> Today</h1></td><td><h1>Total</h1></td></tr>
+                        <tr><td><h1>{{ total | safe}}</h1></td><td><h1>{{ current | safe}} <br>{{ diff_current_price | safe }}</h1></td><td><h1>{{ today_change | safe}}</h1></td><td><h1>{{ total_change | safe}} </h1></td></tr>
+
+                    </table>
+                    <table class="dataframe">
+                        <tr>
+                            <th>Yahoo Ticker</th>
+                            <th>Name</th>
+                            <th>Shares</th>
+                            <th>Dividend (Yield)</th>
+                            <th>Daily Change (%)</th>
+                            <th>Total Change (%)</th>
+                            <th>Total</th>
+                        </tr>
+                        {% if is_empty %}
+                        <tr>
+                            <td colspan="7"><p class="empty_transaction" onclick="openTab(event, 'Transactions')">No transaction added. Click here to add a transaction.</p></td>
+                        </tr>
+                        {% else %}
+                        {{ portfolio | safe }}
+                        {% endif %}
+                    </table>
+                    <div class="layout">
+                        <div class="pie_plot"> {{ sector_pie_script | safe }} {{ sector_pie_plot | safe }} </div>
+                        <div class="pie_plot"> {{ industry_pie_script | safe }} {{ industry_pie_plot | safe }}</div>
+                        <div class="pie_plot">{{ company_pie_script | safe }} {{ company_pie_plot | safe }}</div>
+                    </div>
+                </div>
+                
+                <div id="Growth" class="tabcontent">
+                    <table class="div_info">
+                        <tr>
+                            <th>
+                                <h3>Today</h3>
+                            </th>
+                            <th>
+                                <h3>Last Week</h3>
+                            </th>
+                            <th>
+                                <h3>Last month</h3>
+                            </th>
+                            <th>
+                                <h3>Last Year</h3>
+                            </th>
+                            <th>
+                                <h3>Total</h3>
+                            </th>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h1>{{ today_change | safe}}</h1>
+                            </td>
+                            <td>
+                                <h1>{{ week_change | safe}}</h1>
+                            </td>
+                            <td>
+                                <h1>{{ month_change | safe}}</h1>
+                            </td>
+                            <td>
+                                <h1>{{ year_change | safe}}</h1>
+                            </td>
+                            <td>
+                                <h1>{{ total_change | safe}}</h1>
+                            </td>
+                        </tr>
+                    </table>
+                    <div id="graphDiv">
+                        {{ script | safe}}
+                        {{ close | safe}}
+                    </div>
+                    
+                </div>
+
+                <div id="Dividends" class="tabcontent">
+                    <p class="div_score">{{ div_score | safe}}</p>
+                    <div id="upcoming_dividends">
+                        <h1>Upcoming Dividends</h1>
+                        <table class="dataframe left">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Ticker</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if upcoming_dividends %}
+                                    {% for dividend in upcoming_dividends %}
+                                        <tr>
+                                            <td> {{dividend["date"]}} days</td>
+                                            <td> {{dividend["ticker"]}} </td>
+                                            <td> {{dividend["amount"]}} </td>
+                                        </tr>
+                                        
+                                    {% endfor %}
+                                {% else %}
+                                    <td colspan="2">No upcoming dividends</td>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                        
+                    </div>
+                    <div class="block_60">
+                        <table class="div_info">
+                            <tr>
+                                <th>
+                                    <h3>Div. Yield</h3>
+                                </th>
+                                <th>
+                                    <h3>Net dividend yield</h3>
+                                </th>
+                                <th>
+                                    <h3>Annual Dividends</h3>
+                                </th>
+                                <th>
+                                    <h3>Net Annual Dividends</h3>
+                                </th>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h2>{{ div_yield | safe}}</h2>
+                                </td>
+                                <td>
+                                    <h2>{{ net_div_yield | safe}}</h2>
+                                </td>
+                                <td>
+                                    <h2>{{ annual_div | safe}}</h2>
+                                </td>
+                                <td>
+                                    <h2>{{ net_annual_div | safe}}</h2>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <h1>History</h1>
+                    <table class="div_info">
+                        <tr>
+                            <th>
+                                <h3>Received Dividends</h3>
+                            </th>
+                            <th>
+                                <h3>Received Net Dividends</h3>
+                            </th>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h2>{{ received_div | safe}}</h2>
+                            </td>
+                            <td>
+                                <h2>{{ net_received_div | safe}}</h2>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <div id="graphDiv">
+                        {{ div_script | safe }}
+                        {{ dividends_plot | safe }}
+                    </div>
+                    <h1>Growth</h1>
+                    <table class="div_info">
+                        <tr>
+                            <th>
+                                <h3>1 Year Growth Rate</h3>
+                            </th>
+                            <th>
+                                <h3>3 Years Growth Rate</h3>
+                            </th>
+                            <th>
+                                <h3>5 Years Growth Rate</h3>
+                            </th>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h2>{{ cagr1 | safe}}</h2>
+                            </td>
+                            <td>
+                                <h2>{{ cagr3 | safe}}</h2>
+                            </td>
+                            <td>
+                                <h2>{{ cagr5 | safe}}</h2>
+                            </td>
+                        </tr>
+                    </table>
+                    <h1>Stability & Security</h1>
+                    <table class="div_info">
+                        <tr>
+                            <th>
+                                <h3>Payout Ratio</h3>
+                            </th>
+                            <th>
+                                <h3>Dividend Growth</h3>
+                            </th>
+                            <th>
+                                <h3>Dividend Growth Stability</h3>
+                            </th>
+                        </tr>
+                        <tr>
+
+                            <td>
+                                <h2>{{ payout | safe}}</h2>
+                            </td>
+                            <td>
+                                <h2>{{ growth | safe}} Years</h2>
+                            </td>
+                            <td>
+                                <h2>{{ growth_stability | safe}}</h2>
+                            </td>
+                        </tr>
+                    </table>
+                    <div class="layout">
+                        <div class="pie_plot"> {{ sector_pie_div_script | safe }} {{ sector_pie_div_plot | safe }} </div>
+                        <div class="pie_plot"> {{ industry_pie_div_script | safe }} {{ industry_pie_div_plot | safe }}</div>
+                        <div class="pie_plot">{{ company_pie_div_script | safe }} {{ company_pie_div_plot | safe }}</div>
+                    </div>
+
+                </div>
+                <div id="Transactions" class="tabcontent">
+                    <div id="error_add_transaction"></div>
+                    <table class="dataframe">
+                        <tr>
+                            <th>Yahoo Ticker</th>
+                            <th>Name</th>
+                            <th>Shares</th>
+                            <th>Price per Share (COS)</th>
+                            <th>Price per Share in {{ currency | safe}}</th>
+                            <th>Fees</th>
+                            <th>Date</th>
+                            <th>Total</th>
+                            <th></th>
+                        </tr>
+                        
+                        <tr class="input_row">
+                            <form id="add_transaction" target="_self" method="post">
+                                <input type="text" name="action" hidden=True value="add">
+                                <input type="number" disabled name="total" value="0" hidden=True id="total_add">
+                                <td><input type="text" name="ticker" list="tickers" maxlength=10 required=True placeholder="MSFT" id="ticker_input" onchange="fill_name(tickers);" autocomplete="off">
+                                    <datalist id="tickers">
+                                        {% for key in tickers.keys() %}
+                                        <option value="{{ key }}">{{ key }}</option>
+                                        {% endfor %}
+                                    </datalist></td>
+                                <td><input type="text" name="name" list="names" required placeholder="Microsoft" id="name_input" onchange="fill_ticker(tickers);" autocomplete="off">
+                                    <datalist id="names">
+                                        {% for value in tickers.values() %}
+                                        <option value="{{ value }}">{{ value }}</option>
+                                        {% endfor %}
+                                    </datalist></td>
+                                <td><input type="number" name="shares" required placeholder="2" id="shares" onChange="computeTotal('{{ currency }}');"></td>
+                                <td><input type="number" name="price_COS" required placeholder="136.54"></td>
+                                <td><input type="number" name="price" required placeholder="125.13" id="price" onChange="computeTotal('{{ currency }}');"></td>
+                                <td><input type="number" name="fees" required placeholder="0.15"></td>
+                                <td><input type="date" name="date" required placeholder="2000-01-02" value="" id="date_picker"></td>
+                                <td id="total_add_text">0.00€</td>
+                                <td>
+                                    <div class="submit_button" id="submit_transaction" onclick="add_transaction(tickers);">ADD</div>
+                                </td>
+                            </form>
+                        </tr>
+                        {{ transactions | safe }}
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="right">
         </div>
     </div>
-    <div class="right">
-    </div>
-</div>
 
-</body>
-</html>
+</body></html>
 
 <script>
     document.getElementById('date_picker').value = new Date().toDateInputValue();

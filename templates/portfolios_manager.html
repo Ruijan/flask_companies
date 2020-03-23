@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/main.css') }}">
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-2.0.0.min.js"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.0.0.min.js"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.0.0.min.js"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
+    <!-- TO BE REMOVED/> -->
+    <script>
+        var currencies = {{currencies|tojson}};
+    </script>
+    <script type="text/javascript" src="../static/js/main.js"></script>
+    <link rel="stylesheet" type="text/css" href="../static/styles/main.css">
+</head>
+
+<body>
+    <div style="overflow:auto;">
+        <div class="menu">
+            <div onclick="got_to_portfolio_manager()" class="menu_button">Portfolios</div>
+            <div onclick="go_to_screener()" class="menu_button">Screener</div>
+        </div>
+        <div class="main_content">
+            <div>
+                <div class="logout-button" onclick="disconnect();">Log Out</div>
+                <div class="title">
+                    <h1>Portfolios Dashboard</h1>
+                </div>
+            </div>
+
+            <div id="dividends">
+                {% for portfolio in portfolios %}
+                    <div class="portfolio_button" onclick="show_portfolio('{{ portfolio['name'] }}')">
+                        <h1>{{ portfolio["name"] }}</h1>
+                        Total {{ portfolio["total"] }}<br>
+                            Current {{ portfolio["current"] }}
+                    </div>
+                {% endfor %}
+                <div class="portfolio_add_button" onclick="go_to_portfolio_form()">
+                    <div style="vertical-align: middle; display: table-cell; width: 800px; height: 100px; ">
+                        <h1>Add Portfolio</h1>
+                    </div>
+                </div>
+                <form target="_self" method="post" id="add_portfolio_form" class="hidden">
+                    <table class="large_table">
+                        <tr>
+                            <td><label for="portfolio_name">Portfolio Name:</label></td>
+                            <td><input type="text" value="" name="name" id="portfolio_name"></td>
+                        </tr>
+
+                        <tr>
+                            <td><label for="portfolio_currency">Portfolio Currency:</label></td>
+                            <td><select value="" name="currency" id="portfolio_currency">
+                                <option value="EUR" selected>EUR</option>
+                                <option value="USD" >USD</option>
+                                <option disabled>──────────</option>
+                                {% for currency in currencies %}
+                                    <option value="{{currency}}" >{{currency}}</option>
+                                {% endfor %}
+                                </select></td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align: center;"><div class="submit_portfolio_button" id="submit_portfolio" onclick="add_portfolio(currencies);">ADD</div></td>
+                        </tr>
+                    </table>
+                <div id="error_add_transaction"></div>
+
+                </form>
+            </div>
+        </div>
+        <div class="right">
+        </div>
+    </div>
+
+</body></html>
+<script>
+var should_show = {{ is_portfolio | safe }};
+if (!should_show){
+    document.getElementById("add_portfolio_form").style.display = "block";
+}
+</script>
