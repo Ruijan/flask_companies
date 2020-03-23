@@ -12,9 +12,9 @@ def timed_job():
     print('This job is run every three minutes.')
 
 
-@sched.scheduled_job('cron', day_of_week='mon-fri', minutes=1)
+@sched.scheduled_job('cron', minutes=1)
 def scheduled_job():
-    print('This job is run every weekday every 15min.')
+    print('This job is run every day every 15min.')
     client = pymongo.MongoClient(os.environ["MONGO_URI"])
     db = client.finance
     collection = db.cleaned_companies
