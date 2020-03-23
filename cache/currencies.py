@@ -15,7 +15,7 @@ class Currencies(dict):
             raise Exception("This class is a singleton!")
         else:
             Currencies.__instance = self
-            Currencies.update({"AFN": "Afghani",
+            self.update({"AFN": "Afghani",
                                "DZD": "Algerian Dinar",
                                "ARS": "Argentine Peso",
                                "AMD": "Armenian Dram",

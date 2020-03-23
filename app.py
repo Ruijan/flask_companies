@@ -112,10 +112,14 @@ def display_portfolios_manager():
     is_portfolio = len(portfolios)
     for portfolio in portfolios:
         portfolio["total"] = format_amount(portfolio["total"], portfolio["currency"])
-        portfolio["current"] = format_amount(portfolio["current"], portfolio["currency"])
+        if "current" in portfolio:
+            portfolio["current"] = format_amount(portfolio["current"], portfolio["currency"])
+        else:
+            portfolio["current"] = portfolio["total"]
+    keys = sorted(list(currencies.keys()))
     return render_template("portfolios_manager.html", portfolios=portfolios,
                            is_portfolio=is_portfolio,
-                           currencies=currencies)
+                           currencies=keys)
 
 
 @app.route('/portfolio', methods=['GET', 'POST'])

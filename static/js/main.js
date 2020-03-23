@@ -57,6 +57,23 @@ function add_transaction(tickers) {
     }
 }
 
+function add_portfolio(currencies){
+    if(document.getElementById('add_portfolio_form').reportValidity()){
+        currency = document.getElementById('portfolio_currency').value;
+        alert(currency in currencies);
+        if(currencies.includes(currency)){
+            document.getElementById('submit_portfolio').disabled = true;
+            document.getElementById('submit_portfolio').style.backgroundColor = "grey";
+            document.getElementById('add_portfolio_form').submit();
+        }
+        else{
+            error_div = document.getElementById("error_add_transaction");
+            error_div.style.display = "block";
+            error_div.innerHTML = "Error: Currency " + currency + " does not exists.";
+        }
+    }
+}
+
 function fill_name(tickers) {
     ticker = document.getElementById('ticker_input').value;
     document.getElementById('name_input').value = tickers[ticker];

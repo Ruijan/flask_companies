@@ -213,13 +213,13 @@ def get_all_price_change(hist, is_empty, portfolio):
     month_change = get_price_change(diff_price, 30, portfolio["total"]) if not is_empty else 0
     year_change = get_price_change(diff_price, 365, portfolio["total"]) if not is_empty else 0
     total_change = diff_price[-1] / portfolio["total"] * 100 if not is_empty else 0
-
+    diff_current_price = diff_price[-1] if not is_empty else 0
     return {"today_change": format_percentage_change(daily_change),
             "month_change": format_percentage_change(month_change),
             "total_change": format_percentage_change(total_change),
             "week_change": format_percentage_change(week_change),
             "year_change": format_percentage_change(year_change),
-            "diff_current_price": format_price_change(diff_price[-1], portfolio["currency"])}
+            "diff_current_price": format_price_change(diff_current_price, portfolio["currency"])}
 
 
 def get_pie_plot(summary, field, value):
@@ -278,7 +278,10 @@ def add_transaction_to_summary(c_div, company, summary, txn, txn_hist):
     summary[txn["ticker"]]["dividends"] += c_div
     summary[txn["ticker"]]["total"] += txn["total"]
     previous_amount = (txn_hist["Close"][-2] if txn_hist.shape[0] > 1 else txn["total"])
-    summary[txn["ticker"]]["daily_change"] += txn_hist["Close"][-1] - previous_amount
+    if (datetime.today() - txn_hist.index[-1]).days >= 1:
+        summary[txn["ticker"]]["daily_change"] += 0
+    else:
+        summary[txn["ticker"]]["daily_change"] += txn_hist["Close"][-1] - previous_amount
     summary[txn["ticker"]]["previous_total"] += previous_amount
     summary[txn["ticker"]]["total_change"] += txn_hist["Close"][-1] - txn["total"]
     summary[txn["ticker"]]["ex_dividend_date"] = company["stats"]["ex-dividend_date"]

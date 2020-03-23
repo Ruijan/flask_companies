@@ -10,6 +10,7 @@
     <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
     <!-- TO BE REMOVED/> -->
     <script>
+        var currencies = {{currencies|tojson}};
     </script>
     <script type="text/javascript" src="../static/js/main.js"></script>
     <link rel="stylesheet" type="text/css" href="../static/styles/main.css">
@@ -46,21 +47,25 @@
                     <table class="large_table">
                         <tr>
                             <td><label for="portfolio_name">Portfolio Name:</label></td>
-                            <td><input type="text" value="" name="portfolio_name" id="portfolio_name"></td>
+                            <td><input type="text" value="" name="name" id="portfolio_name"></td>
                         </tr>
 
                         <tr>
                             <td><label for="portfolio_currency">Portfolio Currency:</label></td>
-                            <td><select value="" name="portfolio_currency" id="portfolio_currency">
+                            <td><select value="" name="currency" id="portfolio_currency">
+                                <option value="EUR" selected>EUR</option>
+                                <option value="USD" >USD</option>
+                                <option disabled>──────────</option>
                                 {% for currency in currencies %}
                                     <option value="{{currency}}" >{{currency}}</option>
                                 {% endfor %}
                                 </select></td>
                         </tr>
                         <tr>
-                            <td colspan="2" style="text-align: center;"><div class="submit_portfolio_button" id="submit_transaction" onclick="add_transaction(tickers);">ADD</div></td>
+                            <td colspan="2" style="text-align: center;"><div class="submit_portfolio_button" id="submit_portfolio" onclick="add_portfolio(currencies);">ADD</div></td>
                         </tr>
                     </table>
+                <div id="error_add_transaction"></div>
 
                 </form>
             </div>
