@@ -34,7 +34,7 @@ class StatExtractor(Extractor):
 
     def should_update(self, db_company):
         return ("error_stats" in db_company and db_company["error_stats"]) or ("error_stats" not in db_company) or \
-               ((db_company["last_update"] - datetime.today()).days >= 1)
+               ((datetime.today() - db_company["last_update"]).days >= 1)
 
     def update(self, data, db_company):
         return update_array(db_company, data)

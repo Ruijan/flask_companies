@@ -1,6 +1,7 @@
 from extractor.extractor import Extractor
 from bs4 import BeautifulSoup
 from crawler.cleaner import update_array
+from datetime import datetime
 
 
 class StockSplitExtractor(Extractor):
@@ -30,7 +31,8 @@ class StockSplitExtractor(Extractor):
         return temp_data
 
     def should_update(self, db_company):
-        return ("error_splits" in db_company and db_company["error_splits"]) or ("error_splits" not in db_company)
+        return ("error_splits" in db_company and db_company["error_splits"]) or ("error_splits" not in db_company) or \
+               ((datetime.today() - db_company["last_update"]).days >= 1)
 
     def update(self, data, db_company):
         db_company["error_splits"] = data["error_splits"]

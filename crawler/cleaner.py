@@ -29,11 +29,11 @@ def is_date(string):
 
 
 def check_key_exists(key, company):
-    return key in company and company[key] is not 'N/A'
+    return key in company and company[key] != 'N/A'
 
 
 def select_value(key, dict1, dict2):
-    if dict2[key] is not 'N/A':
+    if dict2[key] != 'N/A':
         return dict2[key]
     return dict1[key]
 

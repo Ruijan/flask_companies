@@ -3,6 +3,7 @@ from bokeh.models import HoverTool
 from bokeh.plotting import figure
 from flask import render_template
 from all_functions import get_yearly_dividends
+from datetime import datetime
 
 
 def display_company(db_company, ticker):
@@ -38,4 +39,5 @@ def display_company(db_company, ticker):
                            cagr3="{:20,.2f}%".format(db_company["cagr_3"] * 100),
                            cagr5="{:20,.2f}%".format(db_company["cagr_5"] * 100),
                            payout="{:20,.2f}%".format(db_company["payout_ratio"] * 100),
-                           growth=str(db_company["continuous_dividend_growth"]))
+                           growth=str(db_company["continuous_dividend_growth"]),
+                           last_update=datetime.strftime(db_company["last_update"], "%Y-%m-%d"))
