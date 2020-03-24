@@ -12,7 +12,7 @@ class SectorExtractor(Extractor):
         r = self.session.get(url)
         page_body = r.text
         soup = BeautifulSoup(page_body, 'html.parser')
-        temp_data = {"error_sector": 'X-Cache' in r.headers and 'Error' in r.headers['X-Cache']}
+        temp_data = {"error_sector": bool('X-Cache' in r.headers and 'Error' in r.headers['X-Cache'])}
         for p in soup.find_all("p", {"class": "D(ib) Va(t)"}):
             sector = p.find("span")
             temp_data[sector.text.lower()] = sector.findNext("span").text

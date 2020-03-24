@@ -147,7 +147,7 @@ def get_cagr(yearly_dividends, years):
 
 def get_dividend_features(dividends, stock_splits, payout_ratio, current_yield):
     data = {"cagr_1": 0, "cagr_3": 0, "cagr_5": 0, "cagr_10": 0, "continuous_dividend_growth": 0,
-            "payout_ratio": payout_ratio, "div_yield": current_yield, "div_score": 0}
+            "payout_ratio": payout_ratio, "div_yield": current_yield if current_yield != 'N/A' else 0, "div_score": 0}
     yearly_dividends = get_yearly_dividends(dividends, stock_splits)
     data["cagr_1"] = get_cagr(yearly_dividends, 1)
     data["cagr_3"] = get_cagr(yearly_dividends, 3)

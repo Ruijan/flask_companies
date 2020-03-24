@@ -7,22 +7,19 @@ import os
 sched = BlockingScheduler()
 
 
-@sched.scheduled_job('interval', minutes=3)
+@sched.scheduled_job('interval', minutes=5)
 def timed_job():
-    print('This job is run every three minutes.')
-
-
-@sched.scheduled_job('cron', day_of_week='mon-fri', hour=10)
-def scheduled_job():
-    print('This job is run every weekday at 9am.')
+    print('This job is run every five minutes.')
     client = pymongo.MongoClient(os.environ["MONGO_URI"])
     db = client.finance
     collection = db.cleaned_companies
-    companies = pd.DataFrame.from_records(collection.find())
+    companies = pd.DataFrame.from_records(collection.find().sort("last_update", 1).limit(100))
+    tickers = list(companies.ticker.values)
+    tickers = pd.DataFrame.from_records(db.tickers.find({"Ticker": {"$in": tickers}}))
     companies = companies.sample(frac=1).reset_index(drop=True)
     logs = ""
-    process_companies(companies, db, logs)
+    process_companies(companies, tickers, db, logs, 4*60)
     client.close()
 
-sched.start()
 
+sched.start()
