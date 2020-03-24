@@ -3,6 +3,7 @@ from crawler.cleaner import is_date, str_amount_to_number, clean_key, update_arr
 from datetime import datetime
 from bs4 import BeautifulSoup
 from numpy import any
+import pandas as pd
 
 
 class StatExtractor(Extractor):
@@ -14,7 +15,7 @@ class StatExtractor(Extractor):
         r = self.session.get(url)
         page_body = r.text
         soup = BeautifulSoup(page_body, 'html.parser')
-        temp_data = {"error_stats": 'X-Cache' in r.headers and 'Error' in r.headers['X-Cache'], 'stats': {}}
+        temp_data = {"error_stats": bool('X-Cache' in r.headers and 'Error' in r.headers['X-Cache']), 'stats': {}}
         for table in soup.findAll("section", {'data-test': "qsp-statistics"}):
             for row in table.findAll("tr"):
                 value = row.find("td").findNext("td").text
@@ -32,7 +33,8 @@ class StatExtractor(Extractor):
         return temp_data
 
     def should_update(self, db_company):
-        return ("error_stats" in db_company and db_company["error_stats"]) or ("error_stats" not in db_company)
+        return ("error_stats" in db_company and db_company["error_stats"]) or ("error_stats" not in db_company) or \
+               ((db_company["last_update"] - datetime.today()).days >= 1)
 
     def update(self, data, db_company):
         return update_array(db_company, data)
@@ -41,5 +43,5 @@ class StatExtractor(Extractor):
         return any([" " in key or key.islower() for key in db_company['stats'].keys()])
 
     def clean(self, db_company):
-        db_company['stats'].rename(lambda x: x.lower().replace(" ", "_"), axis="columns", inplace=True, errors='raise')
+        db_company['stats'] = {key.lower().replace(" ", "_"): value for key, value in db_company['stats'].items()}
         return db_company

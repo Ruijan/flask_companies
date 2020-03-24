@@ -58,5 +58,5 @@ class FinancialExtractor(Extractor):
         return any([" " in key or key.islower() for key in db_company['finances'].keys()])
 
     def clean(self, db_company):
-        db_company["finances"].rename(lambda x: x.lower().replace(" ", "_"), axis="columns", inplace=True, errors='raise')
+        db_company['finances'] = {key.lower().replace(" ", "_"): value for key, value in db_company['finances'].items()}
         return db_company

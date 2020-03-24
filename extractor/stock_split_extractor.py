@@ -14,7 +14,7 @@ class StockSplitExtractor(Extractor):
         page_body = r.text
         soup = BeautifulSoup(page_body, 'html.parser')
         row_index = 0
-        temp_data = {"error_splits": 'X-Cache' in r.headers and 'Error' in r.headers['X-Cache'], "stock_splits": dict()}
+        temp_data = {"error_splits": bool('X-Cache' in r.headers and 'Error' in r.headers['X-Cache']), "stock_splits": dict()}
         for table in soup.findAll("table", {"class": "W(100%) M(0)"}):
             for row in table.findAll("tr"):
                 if row_index > 0 and row.find("td").findNext("td") is not None:
