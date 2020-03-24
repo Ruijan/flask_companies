@@ -23,6 +23,28 @@ body {
     color: cornsilk;
 }
 
+.last_update_recent{
+    border-radius: 5px;
+    background-color: green;
+    padding: 5px;
+    width: 20%;
+}
+
+.last_update_late{
+    border-radius: 5px;
+    background-color: orange;
+    padding: 5px;
+    width: 20%;
+}
+
+.last_update_passed{
+    border-radius: 5px;
+    background-color: darkred;
+    padding: 5px;
+    width: 20%;
+}
+
+
 /* Change background color of buttons on hover */
 .tab button:hover {
     background-color: #98908a;

@@ -10,6 +10,7 @@
     <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
     <!-- TO BE REMOVED/> -->
     <script type="text/javascript" src="../static/js/main.js"></script>
+
     <link rel="stylesheet" type="text/css" href="../static/styles/main.css">
 </head>
 
@@ -39,7 +40,8 @@
                     <h2>{{ ticker | safe}}</h2>
                     <h2>{{ sector | safe}}</h2>
                     <h2>{{ description | safe}}</h2>
-                    <p></p>
+                    <script></script>
+                    <div id="last_update">Last update: {{last_update | safe}}</div>
                 </div>
                 <div id="Dividends" class="tabcontent" style="display: block;">
                     <p class="div_score">{{ div_score | safe}}</p>
@@ -67,5 +69,20 @@
         <div class="right"></div>
     </div>
 </body>
+    <script>
+        var last_update = new Date('{{last_update | safe}}');
+        var today = new Date();
+        var mil_to_days = 24*60*60*1000;
+        var diff_time = (today - last_update)/mil_to_days 
+        var style_date = "last_update_recent";
+        if (diff_time> 1){
+            style_date = "last_update_late";
+        }
+        else if(diff_time > 5){
+            style_date = "last_update_passed";
+        }
+        document.getElementById("last_update").className = style_date;
+        console.log(style_date);
+    </script>
 </html>
 
