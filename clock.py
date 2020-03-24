@@ -7,16 +7,17 @@ import os
 sched = BlockingScheduler()
 
 
-@sched.scheduled_job('interval', minutes=3)
+@sched.scheduled_job('interval', minutes=2)
 def timed_job():
-    print('This job is run every three minutes.')
+    print('This job is run every two minutes.')
     client = pymongo.MongoClient(os.environ["MONGO_URI"])
     db = client.finance
     collection = db.cleaned_companies
+    tickers = pd.DataFrame.from_records(db.tickers.find())
     companies = pd.DataFrame.from_records(collection.find())
     companies = companies.sample(frac=1).reset_index(drop=True)
     logs = ""
-    process_companies(companies, db, logs, 30)
+    process_companies(companies, tickers, db, logs, 30)
     client.close()
 
 
