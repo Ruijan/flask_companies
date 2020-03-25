@@ -37,7 +37,9 @@ class StatExtractor(Extractor):
                ((datetime.today() - db_company["last_update"]).days >= 1)
 
     def update(self, data, db_company):
-        return update_array(db_company, data)
+        db_company["error_stats"] = data["error_stats"]
+        db_company['stats'] = update_array(db_company['stats'], data['stats'])
+        return db_company
 
     def should_clean(self, db_company):
         return any([" " in key or key.islower() for key in db_company['stats'].keys()])
