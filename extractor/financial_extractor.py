@@ -52,7 +52,9 @@ class FinancialExtractor(Extractor):
                (most_recent_quarter is not None and not isinstance(most_recent_quarter, datetime))
 
     def update(self, data, db_company):
-        return update_array(db_company, data)
+        db_company["error_financial"] = data["error_financial"]
+        db_company['finances'] = update_array(db_company['stats'], data['finances'])
+        return db_company
 
     def should_clean(self, db_company):
         return any([" " in key or key.islower() for key in db_company['finances'].keys()])
