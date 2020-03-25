@@ -319,6 +319,22 @@ body {
     .main_content {
         width: 100%;
     }
+    
+    .main_content{
+        margin-top: 75px;
+        padding-left: 0px;
+    }
+    
+    .menu div{
+        float: left;
+        width: 45%;
+    }
+    
+    .menu{
+        background-color: #302E2E;
+        top: 0;
+        margin-left: 0;
+    }
 
     .pie_plot {
         width: 95%;
@@ -334,6 +350,8 @@ body {
 
     #upcoming_dividends {
         float: none;
+        width: 90%;
+        margin: auto;
     }
 }
 
