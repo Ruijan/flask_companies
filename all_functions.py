@@ -52,7 +52,13 @@ def get_corrected_div_values(dividends, stock_splits):
 def get_yearly_dividends(dividends, stock_splits):
     temp_dividends = get_corrected_div_values(dividends, stock_splits)
     dividend_dates = {key: datetime.strptime(key, "%b %d, %Y") for key in dividends.keys()}
-    n_div = {date(v.year, v.month, 1): temp_dividends[k] for k, v in dividend_dates.items()}
+    n_div = dict()
+    for k, v in dividend_dates.items():
+        key = date(v.year, v.month, 1)
+        if key in n_div:
+            n_div[key] += temp_dividends[k]
+        else:
+            n_div[key] = temp_dividends[k]
     years = [key.year for key in n_div.keys()]
     n_div_2 = dict.fromkeys(years, 0)
     for k, v in n_div.items():
