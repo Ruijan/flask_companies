@@ -134,9 +134,8 @@ body {
     background: #302E2E;
 }
 
-.dataframe tr:nth-child(1) {
-    text-align: center;
-    font-size: 12pt;
+.dataframe thead th{
+    cursor: pointer;
 }
 
 .main_content {

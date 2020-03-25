@@ -41,28 +41,32 @@
                 <!-- Tab content -->
                 <div id="Summary" class="tabcontent" style="display: block;">
                     <h1>{{ name | safe}}</h1>
-                    <table class="div_info">
+                    <table class="div_info" >
                         <tr><td><h1>Invested</h1></td><td><h1>Current</h1></td><td><h1> Today</h1></td><td><h1>Total</h1></td></tr>
                         <tr><td><h1>{{ total | safe}}</h1></td><td><h1>{{ current | safe}} <br>{{ diff_current_price | safe }}</h1></td><td><h1>{{ today_change | safe}}</h1></td><td><h1>{{ total_change | safe}} </h1></td></tr>
 
                     </table>
-                    <table class="dataframe">
-                        <tr>
-                            <th>Yahoo Ticker</th>
-                            <th>Name</th>
-                            <th>Shares</th>
-                            <th>Dividend (Yield)</th>
-                            <th>Daily Change (%)</th>
-                            <th>Total Change (%)</th>
-                            <th>Total</th>
-                        </tr>
-                        {% if is_empty %}
-                        <tr>
-                            <td colspan="7"><p class="empty_transaction" onclick="openTab(event, 'Transactions')">No transaction added. Click here to add a transaction.</p></td>
-                        </tr>
-                        {% else %}
-                        {{ portfolio | safe }}
-                        {% endif %}
+                    <table class="dataframe" id="summary_table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable(0, 'summary_table')">Yahoo Ticker</th>
+                                <th onclick="sortTable(1, 'summary_table')">Name</th>
+                                <th onclick="sortTable(2, 'summary_table')">Shares</th>
+                                <th onclick="sortTable(3, 'summary_table')">Dividend (Yield)</th>
+                                <th onclick="sortTable(4, 'summary_table')">Daily Change (%)</th>
+                                <th onclick="sortTable(5, 'summary_table')">Total Change (%)</th>
+                                <th onclick="sortTable(6, 'summary_table')">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if is_empty %}
+                            <tr>
+                                <td colspan="7"><p class="empty_transaction" onclick="openTab(event, 'Transactions')">No transaction added. Click here to add a transaction.</p></td>
+                            </tr>
+                            {% else %}
+                            {{ portfolio | safe }}
+                            {% endif %}
+                        </tbody>
                     </table>
                     <div class="layout">
                         <div class="pie_plot"> {{ sector_pie_script | safe }} {{ sector_pie_plot | safe }} </div>
@@ -260,16 +264,16 @@
                 </div>
                 <div id="Transactions" class="tabcontent">
                     <div id="error_add_transaction"></div>
-                    <table class="dataframe">
+                    <table class="dataframe" id="transaction_table">
                         <tr>
-                            <th>Yahoo Ticker</th>
-                            <th>Name</th>
-                            <th>Shares</th>
-                            <th>Price per Share (COS)</th>
-                            <th>Price per Share in {{ currency | safe}}</th>
-                            <th>Fees</th>
-                            <th>Date</th>
-                            <th>Total</th>
+                            <th onclick="sortTable(0, 'transaction_table', 2)">Yahoo Ticker</th>
+                            <th onclick="sortTable(0, 'transaction_table', 2)">Name</th>
+                            <th onclick="sortTable(0, 'transaction_table', 2)">Shares</th>
+                            <th onclick="sortTable(0, 'transaction_table', 2)">Price per Share (COS)</th>
+                            <th onclick="sortTable(0, 'transaction_table', 2)">Price per Share in {{ currency | safe}}</th>
+                            <th onclick="sortTable(0, 'transaction_table', 2)">Fees</th>
+                            <th onclick="sortTable(0, 'transaction_table', 2)">Date</th>
+                            <th onclick="sortTable(0, 'transaction_table', 2)">Total</th>
                             <th></th>
                         </tr>
                         

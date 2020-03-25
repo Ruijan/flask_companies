@@ -2,15 +2,15 @@ function showCompany(ticker) {
     window.location.href = "/screener/" + ticker;
 }
 
-function show_portfolio(portfolio_name){
+function show_portfolio(portfolio_name) {
     window.location.href = "/portfolio?name=" + portfolio_name;
 }
 
-function got_to_portfolio_manager(){
+function got_to_portfolio_manager() {
     window.location.href = "/portfolios-manager";
 }
 
-function got_to_screener(){
+function got_to_screener() {
     window.location.href = "/";
 }
 
@@ -41,15 +41,14 @@ function disconnect() {
 }
 
 function add_transaction(tickers) {
-    if(document.getElementById('add_transaction').reportValidity()){    
+    if (document.getElementById('add_transaction').reportValidity()) {
         ticker = document.getElementById('ticker_input').value;
         name = document.getElementById('name_input').value;
-        if(ticker in tickers && tickers[ticker] == name){
+        if (ticker in tickers && tickers[ticker] == name) {
             document.getElementById('submit_transaction').disabled = true;
             document.getElementById('submit_transaction').style.backgroundColor = "grey";
             document.getElementById('add_transaction').submit();
-        }
-        else{
+        } else {
             error_div = document.getElementById("error_add_transaction");
             error_div.style.display = "block";
             error_div.innerHTML = "Error: Ticker and Name do not match.";
@@ -57,16 +56,15 @@ function add_transaction(tickers) {
     }
 }
 
-function add_portfolio(currencies){
-    if(document.getElementById('add_portfolio_form').reportValidity()){
+function add_portfolio(currencies) {
+    if (document.getElementById('add_portfolio_form').reportValidity()) {
         currency = document.getElementById('portfolio_currency').value;
         alert(currency in currencies);
-        if(currencies.includes(currency)){
+        if (currencies.includes(currency)) {
             document.getElementById('submit_portfolio').disabled = true;
             document.getElementById('submit_portfolio').style.backgroundColor = "grey";
             document.getElementById('add_portfolio_form').submit();
-        }
-        else{
+        } else {
             error_div = document.getElementById("error_add_transaction");
             error_div.style.display = "block";
             error_div.innerHTML = "Error: Currency " + currency + " does not exists.";
@@ -84,7 +82,7 @@ function fill_ticker(tickers) {
     document.getElementById('ticker_input').value = getKeyByValue(tickers, name);
 }
 
-function go_to_portfolio_form(){
+function go_to_portfolio_form() {
     var elmnt = document.getElementById("add_portfolio_form");
     elmnt.style.display = "block";
     elmnt.scrollIntoView();
@@ -113,6 +111,70 @@ function openTab(evt, tabName) {
     // Show the current tab, and add an "active" class to the button that opened the tab
     document.getElementById(tabName).style.display = "block";
     evt.currentTarget.className += " active";
+}
+
+
+function sortTable(n, element, ignore=1) {
+    var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+    table = document.getElementById(element);
+    switching = true;
+    // Set the sorting direction to ascending:
+    dir = "asc";
+    /* Make a loop that will continue until
+    no switching has been done: */
+    while (switching) {
+        // Start by saying: no switching is done:
+        switching = false;
+        rows = table.rows;
+        /* Loop through all table rows (except the
+        first, which contains table headers): */
+        for (i = ignore; i < (rows.length - 1); i++) {
+            // Start by saying there should be no switching:
+            shouldSwitch = false;
+            /* Get the two elements you want to compare,
+            one from current row and one from the next: */
+            x = rows[i].getElementsByTagName("TD")[n].innerHTML.toLowerCase();
+            x_float = parseFloat(x.replace(/[^\d.-]/g, ''));
+            if(!Number.isNaN(x_float)){
+                x = x_float;
+            }
+            y = rows[i + 1].getElementsByTagName("TD")[n].innerHTML.toLowerCase();
+            y_float = parseFloat(y.replace(/[^\d.-]/g, ''));
+            if(!Number.isNaN(x_float)){
+                y = y_float;
+            }
+            /* Check if the two rows should switch place,
+            based on the direction, asc or desc: */
+            if (dir == "asc") {
+                if (x > y) {
+                    // If so, mark as a switch and break the loop:
+                    shouldSwitch = true;
+                    break;
+                }
+            } else if (dir == "desc") {
+                if (x < y) {
+                    // If so, mark as a switch and break the loop:
+                    shouldSwitch = true;
+                    break;
+                }
+            }
+        }
+        if (shouldSwitch) {
+            /* If a switch has been marked, make the switch
+            and mark that a switch has been done: */
+            rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+            switching = true;
+            // Each time a switch is done, increase this count by 1:
+            switchcount++;
+        } else {
+            /* If no switching has been done AND the direction is "asc",
+            set the direction to "desc" and run the while loop again. */
+            if (switchcount == 0 && dir == "asc") {
+                dir = "desc";
+                switching = true;
+            }
+        }
+    }
 }
 
 Date.prototype.toDateInputValue = (function () {
