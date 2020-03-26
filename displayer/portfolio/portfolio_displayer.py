@@ -17,6 +17,7 @@ from bokeh.transform import cumsum
 from flask import render_template
 from pandas import Series
 
+from all_functions import get_yearly_dividends
 from extractor.dividend_extractor import compute_dividends
 
 
@@ -122,7 +123,8 @@ def get_context(all_tickers, div_1_y, div_3_y, div_5_y, dividends, growth, hist,
 
 def get_upcoming_dividends(summary, currency):
     upcoming_dividends = [{"ticker": key,
-                           "amount": format_currency(position["dividends"], currency, locale='en_US'),
+                           "amount": format_currency(position["dividends"]/position["dividend_frequency"], currency,
+                                                     locale='en_US'),
                            "date": (position["ex_dividend_date"] - datetime.today()).days}
                           for key, position in summary.items() if (position["ex_dividend_date"] - datetime.today()).days > 0]
     upcoming_dividends = sorted(upcoming_dividends, key=lambda x: x["date"])
@@ -285,6 +287,16 @@ def add_transaction_to_summary(c_div, company, summary, txn, txn_hist):
     summary[txn["ticker"]]["previous_total"] += previous_amount
     summary[txn["ticker"]]["total_change"] += txn_hist["Close"][-1] - txn["total"]
     summary[txn["ticker"]]["ex_dividend_date"] = company["stats"]["ex-dividend_date"]
+    div_freq = dict()
+    for key, value in company["dividend_history"].items():
+        year = datetime.strptime(key, "%b %d, %Y").year
+        if year not in div_freq:
+            div_freq[year] = 0
+        div_freq[year] += 1
+    div_freq = [(year, value) for year, value in div_freq.items()]
+    div_freq = sorted(div_freq, key=lambda x: x[0], reverse=True)
+    div_freq = [x[1] for x in div_freq]
+    summary[txn["ticker"]]["dividend_frequency"] = round(np.mean(div_freq[1:5]))
 
 
 def get_portfolio_summary_table(summary, currency):
