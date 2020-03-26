@@ -56,12 +56,15 @@ class LocalHistoryCache(dict):
             added_history = yf.Ticker(key).history(start=start_date, end=self[key]["start_date"] - timedelta(days=1))
             self[key]["history"] = self[key]["history"].append(added_history).sort_values(by=["Date"], ascending=True)
             self[key]["start_date"] = start_date
-        half_day_seconds = 24 * 24 * 12
+        half_day_seconds = 60 * 60 * 12
         if self[key] is None or (datetime.now() - self[key]["last_update"]).seconds > half_day_seconds:
             should_update = True
 
         if should_update:
-            self[key] = {"history": yf.Ticker(key).history(period="max"), "last_update": datetime.now()}
+            self[key] = {"history": yf.Ticker(key).history(start=start_date, end=datetime.today()),
+                         "last_update": datetime.now(),
+                         "start_date": self[key]["start_date"],
+                         "end_date": datetime.today()}
         hist = self[key]["history"].copy()
         mask = (hist.index >= start_date) & (hist.index <= end_date)
         return hist.loc[mask]
