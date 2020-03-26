@@ -61,5 +61,8 @@ class CompanyExtractor:
         self.session.close()
         self.session = requests.Session()
 
+    def shutdown(self):
+        self.pool.terminate()
+
 
 

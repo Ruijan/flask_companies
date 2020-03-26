@@ -41,3 +41,4 @@ def process_companies(db_companies, companies, db, logs, max_time):
             count_error = 0
     if len(failed_companies) > 0 and len(failed_companies) != len(companies):
         process_companies(failed_companies)
+    crawler.shutdown()
