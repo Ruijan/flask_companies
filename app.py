@@ -13,6 +13,7 @@ from displayer.portfolio.portfolio_displayer import render_portfolio
 from cache.local_history_cache import LocalHistoryCache
 from cache.currencies import Currencies
 from displayer.portfolio.portfolio_displayer import format_amount
+from flask_simple_geoip import SimpleGeoIP
 
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]
@@ -27,7 +28,9 @@ pymongo_connected = False
 if 'MONGO_URI' in os.environ:
     app.config['MONGO_DBNAME'] = 'finance'
     app.config['MONGO_URI'] = os.environ['MONGO_URI'].strip("'").replace('test', app.config['MONGO_DBNAME'])
+    app.config["GEOIPIFY_API_KEY"] = os.environ['WHOIS_KEY']
     mongo = PyMongo(app)
+    simple_geoip = SimpleGeoIP(app)
     pymongo_connected = True
     companies_cache = CompaniesCache(mongo.db.cleaned_companies)
     history_cache = LocalHistoryCache(mongo.db.history)
@@ -175,7 +178,20 @@ def login():
     if request.method == 'POST':
         data = request.form
         f = Fernet(bytes(os.environ["MONGO_KEY"], 'utf-8'))
-        user = mongo.db.users.find_one({"email": data["email"]})
+        email = f.encrypt(data["email"].encode())
+        user = mongo.db.users.find_one({"email": email})
+        if user is None:
+            user = mongo.db.users.find_one({"email": data["email"]})
+            if user is not None:
+                user["first_name"] = f.encrypt(user["first_name"].encode())
+                user["last_name"] = f.encrypt(user["last_name"].encode())
+                user["email"] = f.encrypt(user["email"].encode())
+                mongo.db.users.find_one_and_replace({"email": data["email"]}, user)
+                portfolios = list(mongo.db.portfolio.find({"email": data["email"]}))
+                for portfolio in portfolios:
+                    portfolio["email"] = user["email"]
+                    mongo.db.portfolio.find_one_and_replace({"email": data["email"]}, portfolio)
+
         if user is not None:
             db_pass = f.decrypt(user["pass"]).decode("utf-8")
             if db_pass == data["pass"]:
@@ -211,6 +227,11 @@ def register():
         data = request.form.to_dict(flat=True)
         f = Fernet(bytes(os.environ["MONGO_KEY"], 'utf-8'))
         data["pass"] = f.encrypt(data["pass"].encode())
+        data["first_name"] = f.encrypt(data["first_name"].encode())
+        data["last_name"] = f.encrypt(data["last_name"].encode())
+        data["email"] = f.encrypt(data["email"].encode())
+        data["creation_date"] = datetime.now()
+        data["geolocation"] = simple_geoip.get_geoip_data()
         data.pop("pass2")
         user = None
         try:

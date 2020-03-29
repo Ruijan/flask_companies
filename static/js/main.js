@@ -59,7 +59,6 @@ function add_transaction(tickers) {
 function add_portfolio(currencies) {
     if (document.getElementById('add_portfolio_form').reportValidity()) {
         currency = document.getElementById('portfolio_currency').value;
-        alert(currency in currencies);
         if (currencies.includes(currency)) {
             document.getElementById('submit_portfolio').disabled = true;
             document.getElementById('submit_portfolio').style.backgroundColor = "grey";
