@@ -14,7 +14,7 @@ from babel.numbers import format_currency
 from bokeh.embed import components
 from bokeh.models import ColumnDataSource
 from bokeh.models import HoverTool
-from bokeh.palettes import Accent6
+from bokeh.palettes import Accent6, mpl
 from bokeh.plotting import figure
 from bokeh.transform import cumsum
 from flask import render_template
@@ -22,7 +22,7 @@ from pandas import Series
 from bokeh.models import GeoJSONDataSource
 from extractor.dividend_extractor import compute_dividends
 import matplotlib.cm
-from bokeh.models import ColorBar, LogColorMapper, LogTicker
+from bokeh.models import ColorBar, LogColorMapper, LogTicker, LinearColorMapper, BasicTicker
 
 
 def render_portfolio(portfolio, tickers, db_companies, cache, tab, db_portfolio):
@@ -118,7 +118,7 @@ def get_context(all_tickers, div_1_y, div_3_y, div_5_y, dividends, growth, hist,
     context["upcoming_dividends"] = get_upcoming_dividends(summary, portfolio["currency"])
     print("---- Get upcoming dividends table --- %s seconds ---" % (time.time() - start_time))
     context["transactions"] = transactions_html
-    context.update(get_world_map_plot(summary))
+    context.update(get_world_maps(summary))
     context.update(
         get_dividends_info(portfolio, hist, dividends, net_dividends, div_1_y, div_3_y, div_5_y, payout,
                            growth, is_empty))
@@ -152,17 +152,19 @@ def update_portfolio(db_portfolio, hist, is_empty, portfolio):
         db_portfolio.find_one_and_replace({"email": portfolio["email"], "name": portfolio["name"]}, portfolio)
 
 
-def get_world_map_plot(summary):
-    amount_invested = {}
-    for ticker, company in summary.items():
-        country = company["country"] if company["country"] != "USA" else "United States"
-        country = pycountry.countries.get(name=country).alpha_3
-        if country not in amount_invested:
-            amount_invested[country] = 0
-        amount_invested[country] += company["total"]
+def get_world_maps(summary):
+    context = {}
+    context.update(get_world_map_plot(summary, "total"))
+    context.update(get_world_map_plot(summary, "dividends"))
+    context.update(get_world_map_plot(summary, "total_change"))
+    return context
 
-    max_invested = max(amount_invested.values())
 
+def get_world_map_plot(summary, value):
+    value_per_country = group_value_by_country(summary, value)
+    max_value = max(value_per_country.values())
+    min_value = min(value_per_country.values())
+    abs_max_value = abs(min_value) if abs(min_value) > abs(max_value) else abs(max_value)
     with open('resources/world_map.json') as f:
         data = json.load(f)
     # No need for Antarctica
@@ -172,12 +174,19 @@ def get_world_map_plot(summary):
 
     empty_countries = data.copy()
     empty_countries["features"] = []
-    cmap = matplotlib.cm.get_cmap('inferno')
+    if min_value >= 0:
+        cmap = matplotlib.cm.get_cmap('inferno')
+    else:
+        cmap = matplotlib.cm.get_cmap('RdYlGn')
     for i in range(len(data['features'])):
         country = data['features'][i]['id']
-        if country in amount_invested:
-            data['features'][i]['properties']['amount'] = amount_invested[country]
-            data['features'][i]['properties']['color'] = np.log(amount_invested[country]) / np.log(max_invested)
+        if country in value_per_country:
+            data['features'][i]['properties']['amount'] = value_per_country[country]
+            if min_value < 0:
+                n_value = (value_per_country[country] + abs_max_value) / (2*abs_max_value)
+                data['features'][i]['properties']['color'] = n_value
+            else:
+                data['features'][i]['properties']['color'] = np.log(value_per_country[country]) / np.log(max_value)
             to_be_plotted["features"].append(data['features'][i])
         else:
             data['features'][i]['properties']['amount'] = 0
@@ -200,15 +209,21 @@ def get_world_map_plot(summary):
         ))
 
     p.multi_line('xs', 'ys', source=geo_source, color='cornsilk', line_width=1.5)
-    color_mapper = LogColorMapper(palette="Inferno256", low=1, high=3400)
-    color_bar = ColorBar(color_mapper=color_mapper, ticker=LogTicker(), border_line_color=None, location=(0, 0),
+    colors = [matplotlib.colors.rgb2hex(cmap(i / 256.0)) for i in range(256)]
+    if min_value >= 0:
+        color_mapper = LogColorMapper(palette=colors, low=1, high=max_value)
+        ticks = LogTicker()
+    else:
+        color_mapper = LinearColorMapper(palette=colors, low=-abs_max_value, high=abs_max_value)
+        ticks = BasicTicker()
+    color_bar = ColorBar(color_mapper=color_mapper, ticker=ticks, border_line_color=None, location=(0, 0),
                          background_fill_alpha=0., label_standoff=12)
     color_bar.major_label_text_color = "white"
     p.add_layout(color_bar, 'right')
     p.background_fill_alpha = 0.
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
-
+    p.toolbar.active_drag = None
     p.border_fill_alpha = 0.
     p.outline_line_alpha = 0.
     p.axis.visible = False
@@ -217,7 +232,18 @@ def get_world_map_plot(summary):
     p.yaxis.major_tick_line_color = None  # turn off y-axis major ticks
     p.yaxis.minor_tick_line_color = None  # turn off y-axis minor ticks
     script, world_map = components(p)
-    return {"world_map_script": script, "world_map_plot": world_map}
+    return {"world_map_script_" + value: script, "world_map_plot_" + value: world_map}
+
+
+def group_value_by_country(summary, value):
+    amount_invested = {}
+    for ticker, company in summary.items():
+        country = company["country"] if company["country"] != "USA" else "United States"
+        country = pycountry.countries.get(name=country).alpha_3
+        if country not in amount_invested:
+            amount_invested[country] = 0
+        amount_invested[country] += company[value]
+    return amount_invested
 
 
 def get_growth_plot(summary, hist, is_empty):
