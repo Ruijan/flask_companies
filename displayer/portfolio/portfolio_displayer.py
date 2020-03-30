@@ -4,7 +4,6 @@ import time
 from datetime import datetime, timedelta
 from math import pi
 
-import plotly
 from bokeh.colors import RGB
 from colour import Color
 import ccy
@@ -22,7 +21,8 @@ from flask import render_template
 from pandas import Series
 from bokeh.models import GeoJSONDataSource
 from extractor.dividend_extractor import compute_dividends
-import matplotlib
+import matplotlib.cm
+from bokeh.models import ColorBar, LogColorMapper, LogTicker
 
 
 def render_portfolio(portfolio, tickers, db_companies, cache, tab, db_portfolio):
@@ -153,19 +153,6 @@ def update_portfolio(db_portfolio, hist, is_empty, portfolio):
 
 
 def get_world_map_plot(summary):
-    # with open('resources/worldmap3.json') as f:
-    #     geojson = json.load(f)
-    #     f.close()
-
-    # data = {"Country": list(countries.keys()), "Amount": list(countries.values())}
-    # df = pd.DataFrame.from_dict(data)
-    # fig = px.choropleth_mapbox(df, geojson=geojson, color="Amount",
-    #                            locations="Country", featureidkey="id",
-    #                            center={"lat": 45.5517, "lon": -73.7073},
-    #                            mapbox_style="carto-positron", zoom=1)
-    # fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-    # graph_json = json.dumps([fig], cls=plotly.utils.PlotlyJSONEncoder)
-
     amount_invested = {}
     for ticker, company in summary.items():
         country = company["country"] if company["country"] != "USA" else "United States"
@@ -185,26 +172,18 @@ def get_world_map_plot(summary):
 
     empty_countries = data.copy()
     empty_countries["features"] = []
-    cmap = matplotlib.cm.get_cmap('YlOrRd')
+    cmap = matplotlib.cm.get_cmap('inferno')
     for i in range(len(data['features'])):
         country = data['features'][i]['id']
         if country in amount_invested:
             data['features'][i]['properties']['amount'] = amount_invested[country]
-            data['features'][i]['properties']['color'] = amount_invested[country] / max_invested
+            data['features'][i]['properties']['color'] = np.log(amount_invested[country]) / np.log(max_invested)
             to_be_plotted["features"].append(data['features'][i])
         else:
             data['features'][i]['properties']['amount'] = 0
             empty_countries["features"].append(data['features'][i])
-
-
     geo_source = GeoJSONDataSource(geojson=json.dumps(data))
-    TOOLTIPS = [
-        ("Country", "@name"),
-        ("Invested", "@amount")
-    ]
-
-    p = figure(background_fill_color="lightgrey", sizing_mode='scale_width', toolbar_location=None,
-               tools="hover", aspect_ratio=1920.0 / 1080, tooltips=TOOLTIPS)
+    p = figure(background_fill_color="lightgrey", sizing_mode='scale_width', toolbar_location=None, aspect_ratio=1920.0 / 920)
     temp_geo_source = GeoJSONDataSource(geojson=json.dumps(empty_countries))
     p.patches('xs', 'ys', source=temp_geo_source, color='grey')
     for i in range(len(to_be_plotted['features'])):
@@ -213,9 +192,19 @@ def get_world_map_plot(summary):
         temp_geo_source = GeoJSONDataSource(geojson=json.dumps(temp_data))
         ratio = temp_data['features'][0]['properties']['color']
         color = cmap(ratio)
-        p.patches('xs', 'ys', source=temp_geo_source, color=RGB(color[0] * 255, color[1] * 255, color[2] * 255))
+        amount_plot = p.patches('xs', 'ys', source=temp_geo_source, color=RGB(color[0] * 255, color[1] * 255, color[2] * 255))
+        p.add_tools(HoverTool(
+            tooltips=[("Country", "@name"), ("Invested", "@amount{%0.2f}")],
+            formatters={'@amount': 'printf'},
+            renderers=[amount_plot]
+        ))
 
-    p.multi_line('xs', 'ys', source=geo_source, color='white', line_width=1)
+    p.multi_line('xs', 'ys', source=geo_source, color='cornsilk', line_width=1.5)
+    color_mapper = LogColorMapper(palette="Inferno256", low=1, high=3400)
+    color_bar = ColorBar(color_mapper=color_mapper, ticker=LogTicker(), border_line_color=None, location=(0, 0),
+                         background_fill_alpha=0., label_standoff=12)
+    color_bar.major_label_text_color = "white"
+    p.add_layout(color_bar, 'right')
     p.background_fill_alpha = 0.
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
