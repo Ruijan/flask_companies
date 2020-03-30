@@ -14,6 +14,7 @@ from cache.local_history_cache import LocalHistoryCache
 from cache.currencies import Currencies
 from displayer.portfolio.portfolio_displayer import format_amount
 from flask_simple_geoip import SimpleGeoIP
+from bson.binary import Binary
 
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]
@@ -178,11 +179,14 @@ def login():
     if request.method == 'POST':
         data = request.form
         f = Fernet(bytes(os.environ["MONGO_KEY"], 'utf-8'))
-        email = f.encrypt(data["email"].encode())
-        user = mongo.db.users.find_one({"email": email})
-        if user is None:
-            user = mongo.db.users.find_one({"email": data["email"]})
-            if user is not None:
+        users = list(mongo.db.users.find())
+        for tmp_user in users:
+            if isinstance(tmp_user["email"], bytes):
+                email = f.decrypt(tmp_user["email"]).decode("utf-8")
+                if email == data["email"]:
+                    user = tmp_user
+            elif tmp_user["email"] == data["email"]:
+                user = tmp_user
                 user["first_name"] = f.encrypt(user["first_name"].encode())
                 user["last_name"] = f.encrypt(user["last_name"].encode())
                 user["email"] = f.encrypt(user["email"].encode())
@@ -191,7 +195,6 @@ def login():
                 for portfolio in portfolios:
                     portfolio["email"] = user["email"]
                     mongo.db.portfolio.find_one_and_replace({"email": data["email"]}, portfolio)
-
         if user is not None:
             db_pass = f.decrypt(user["pass"]).decode("utf-8")
             if db_pass == data["pass"]:
@@ -235,7 +238,7 @@ def register():
         data.pop("pass2")
         user = None
         try:
-            user = mongo.db.users.find_one({"user": data["user"]})
+            user = mongo.db.users.find_one({"email": data["email"]})
         except:
             pass
         if user is None:
