@@ -180,6 +180,7 @@ def login():
         data = request.form
         f = Fernet(bytes(os.environ["MONGO_KEY"], 'utf-8'))
         users = list(mongo.db.users.find())
+        user = None
         for tmp_user in users:
             if isinstance(tmp_user["email"], bytes):
                 email = f.decrypt(tmp_user["email"]).decode("utf-8")
