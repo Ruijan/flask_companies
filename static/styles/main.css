@@ -310,6 +310,11 @@ body {
     width: 30%;
 }
 
+#world_map{
+    width: 95%;
+    margin: auto;
+}
+
 @media only screen and (max-width:720px) {
 
     /* For mobile phones: */
