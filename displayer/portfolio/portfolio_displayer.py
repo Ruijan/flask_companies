@@ -1,7 +1,11 @@
+import json
 import math
 import time
 from datetime import datetime, timedelta
 from math import pi
+
+import plotly
+from bokeh.colors import RGB
 from colour import Color
 import ccy
 import numpy as np
@@ -16,9 +20,9 @@ from bokeh.plotting import figure
 from bokeh.transform import cumsum
 from flask import render_template
 from pandas import Series
-
-from all_functions import get_yearly_dividends
+from bokeh.models import GeoJSONDataSource
 from extractor.dividend_extractor import compute_dividends
+import matplotlib
 
 
 def render_portfolio(portfolio, tickers, db_companies, cache, tab, db_portfolio):
@@ -114,6 +118,7 @@ def get_context(all_tickers, div_1_y, div_3_y, div_5_y, dividends, growth, hist,
     context["upcoming_dividends"] = get_upcoming_dividends(summary, portfolio["currency"])
     print("---- Get upcoming dividends table --- %s seconds ---" % (time.time() - start_time))
     context["transactions"] = transactions_html
+    context.update(get_world_map_plot(summary))
     context.update(
         get_dividends_info(portfolio, hist, dividends, net_dividends, div_1_y, div_3_y, div_5_y, payout,
                            growth, is_empty))
@@ -123,10 +128,11 @@ def get_context(all_tickers, div_1_y, div_3_y, div_5_y, dividends, growth, hist,
 
 def get_upcoming_dividends(summary, currency):
     upcoming_dividends = [{"ticker": key,
-                           "amount": format_currency(position["dividends"]/position["dividend_frequency"], currency,
+                           "amount": format_currency(position["dividends"] / position["dividend_frequency"], currency,
                                                      locale='en_US'),
                            "date": (position["ex_dividend_date"] - datetime.today()).days}
-                          for key, position in summary.items() if (position["ex_dividend_date"] - datetime.today()).days > 0]
+                          for key, position in summary.items() if
+                          (position["ex_dividend_date"] - datetime.today()).days > 0]
     upcoming_dividends = sorted(upcoming_dividends, key=lambda x: x["date"])
     return upcoming_dividends
 
@@ -144,6 +150,85 @@ def update_portfolio(db_portfolio, hist, is_empty, portfolio):
         portfolio_changed = True
     if portfolio_changed:
         db_portfolio.find_one_and_replace({"email": portfolio["email"], "name": portfolio["name"]}, portfolio)
+
+
+def get_world_map_plot(summary):
+    # with open('resources/worldmap3.json') as f:
+    #     geojson = json.load(f)
+    #     f.close()
+
+    # data = {"Country": list(countries.keys()), "Amount": list(countries.values())}
+    # df = pd.DataFrame.from_dict(data)
+    # fig = px.choropleth_mapbox(df, geojson=geojson, color="Amount",
+    #                            locations="Country", featureidkey="id",
+    #                            center={"lat": 45.5517, "lon": -73.7073},
+    #                            mapbox_style="carto-positron", zoom=1)
+    # fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+    # graph_json = json.dumps([fig], cls=plotly.utils.PlotlyJSONEncoder)
+
+    amount_invested = {}
+    for ticker, company in summary.items():
+        country = company["country"] if company["country"] != "USA" else "United States"
+        country = pycountry.countries.get(name=country).alpha_3
+        if country not in amount_invested:
+            amount_invested[country] = 0
+        amount_invested[country] += company["total"]
+
+    max_invested = max(amount_invested.values())
+
+    with open('resources/world_map.json') as f:
+        data = json.load(f)
+    # No need for Antarctica
+    data['features'].pop(6)
+    to_be_plotted = data.copy()
+    to_be_plotted["features"] = []
+
+    empty_countries = data.copy()
+    empty_countries["features"] = []
+    cmap = matplotlib.cm.get_cmap('YlOrRd')
+    for i in range(len(data['features'])):
+        country = data['features'][i]['id']
+        if country in amount_invested:
+            data['features'][i]['properties']['amount'] = amount_invested[country]
+            data['features'][i]['properties']['color'] = amount_invested[country] / max_invested
+            to_be_plotted["features"].append(data['features'][i])
+        else:
+            data['features'][i]['properties']['amount'] = 0
+            empty_countries["features"].append(data['features'][i])
+
+
+    geo_source = GeoJSONDataSource(geojson=json.dumps(data))
+    TOOLTIPS = [
+        ("Country", "@name"),
+        ("Invested", "@amount")
+    ]
+
+    p = figure(background_fill_color="lightgrey", sizing_mode='scale_width', toolbar_location=None,
+               tools="hover", aspect_ratio=1920.0 / 1080, tooltips=TOOLTIPS)
+    temp_geo_source = GeoJSONDataSource(geojson=json.dumps(empty_countries))
+    p.patches('xs', 'ys', source=temp_geo_source, color='grey')
+    for i in range(len(to_be_plotted['features'])):
+        temp_data = to_be_plotted.copy()
+        temp_data['features'] = [temp_data['features'][i]]
+        temp_geo_source = GeoJSONDataSource(geojson=json.dumps(temp_data))
+        ratio = temp_data['features'][0]['properties']['color']
+        color = cmap(ratio)
+        p.patches('xs', 'ys', source=temp_geo_source, color=RGB(color[0] * 255, color[1] * 255, color[2] * 255))
+
+    p.multi_line('xs', 'ys', source=geo_source, color='white', line_width=1)
+    p.background_fill_alpha = 0.
+    p.xgrid.grid_line_color = None
+    p.ygrid.grid_line_color = None
+
+    p.border_fill_alpha = 0.
+    p.outline_line_alpha = 0.
+    p.axis.visible = False
+    p.xaxis.major_tick_line_color = None  # turn off x-axis major ticks
+    p.xaxis.minor_tick_line_color = None  # turn off x-axis minor ticks
+    p.yaxis.major_tick_line_color = None  # turn off y-axis major ticks
+    p.yaxis.minor_tick_line_color = None  # turn off y-axis minor ticks
+    script, world_map = components(p)
+    return {"world_map_script": script, "world_map_plot": world_map}
 
 
 def get_growth_plot(summary, hist, is_empty):
