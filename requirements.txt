@@ -1,3 +1,4 @@
+plotly
 colour
 pycountry
 ccy
@@ -11,6 +12,7 @@ matplotlib
 pandas
 flask
 flask_pymongo
+flask-simple-geoip
 gunicorn
 dnspython
 Jinja2 >=2.7
