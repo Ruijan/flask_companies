@@ -78,8 +78,8 @@
                     </div>
                     <div class="chart" id="bargraph"></div>
                     <div id="world_map">
-                        {{ world_map_script | safe}}
-                        {{ world_map_plot| safe}}
+                        {{ world_map_script_total | safe}}
+                        {{ world_map_plot_total | safe}}
                     </div>
                 </div>
                 
@@ -123,6 +123,10 @@
                     <div id="graphDiv">
                         {{ script | safe}}
                         {{ close | safe}}
+                    </div>
+                    <div id="world_map">
+                        {{ world_map_script_total_change | safe}}
+                        {{ world_map_plot_total_change | safe}}
                     </div>
                     
                 </div>
@@ -268,7 +272,10 @@
                         <div class="pie_plot"> {{ industry_pie_div_script | safe }} {{ industry_pie_div_plot | safe }}</div>
                         <div class="pie_plot">{{ company_pie_div_script | safe }} {{ company_pie_div_plot | safe }}</div>
                     </div>
-
+                    <div id="world_map">
+                        {{ world_map_script_dividends | safe}}
+                        {{ world_map_plot_dividends | safe}}
+                    </div>
                 </div>
                 <div id="Transactions" class="tabcontent">
                     <div id="error_add_transaction"></div>
