@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
-import json
-import os
 import time
 from datetime import datetime
 from crawler.company_extractor import CompanyExtractor
-import pymongo
-import pandas as pd
 
 
-def process_companies(db_companies, companies, db, logs, max_time):
+def process_companies(db_companies, pool, companies, db, logs, max_time):
     start_time = time.time()
-    crawler = CompanyExtractor()
+    crawler = CompanyExtractor(pool)
     count_error = 0
     for index, company in companies.iterrows():
         if time.time() - start_time > max_time:
@@ -37,4 +33,3 @@ def process_companies(db_companies, companies, db, logs, max_time):
             time.sleep(60)
             crawler.reset_session()
             count_error = 0
-    crawler.shutdown()

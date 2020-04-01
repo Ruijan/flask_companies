@@ -1,6 +1,5 @@
 import requests
 from datetime import datetime
-from multiprocessing.pool import ThreadPool
 
 from extractor.dividend_extractor import DividendExtractor
 from extractor.financial_extractor import FinancialExtractor
@@ -14,9 +13,9 @@ class CompanyExtractor:
     session = None
     pool = None
 
-    def __init__(self):
+    def __init__(self, pool):
         self.session = requests.Session()
-        self.pool = ThreadPool(processes=5)
+        self.pool = pool
         self.extractors["Stats"] = StatExtractor(self.session)
         self.extractors["Sector"] = SectorExtractor(self.session)
         self.extractors["Finance"] = FinancialExtractor(self.session)
@@ -60,9 +59,6 @@ class CompanyExtractor:
     def reset_session(self):
         self.session.close()
         self.session = requests.Session()
-
-    def shutdown(self):
-        self.pool.terminate()
 
 
 

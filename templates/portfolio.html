@@ -44,7 +44,7 @@
                     <h1>{{ name | safe}}</h1>
                     <table class="div_info" >
                         <tr><td><h1>Invested</h1></td><td><h1>Current</h1></td><td><h1> Today</h1></td><td><h1>Total</h1></td></tr>
-                        <tr><td><h1>{{ total | safe}}</h1></td><td><h1>{{ current | safe}} </h1></td><td><h1>{{ today_change | safe}}</h1></td><td><h1>{{ total_change | safe}}<br>{{ diff_current_price | safe }}</h1></td></tr>
+                        <tr><td><h1>{{ total | safe}}</h1></td><td><h1>{{ current | safe}} </h1></td><td><h1>{{ today_change | safe}}<br>{{ diff_today_current_price | safe }}</h1></td><td><h1>{{ total_change | safe}}<br>{{ diff_current_price | safe }}</h1></td></tr>
 
                     </table>
                     <table class="dataframe" id="summary_table">

@@ -25,7 +25,7 @@ import matplotlib.cm
 from bokeh.models import ColorBar, LogColorMapper, LogTicker, LinearColorMapper, BasicTicker
 
 
-def render_portfolio(portfolio, tickers, db_companies, cache, tab, db_portfolio):
+def render_portfolio(pool, portfolio, tickers, db_companies, cache, tab, db_portfolio):
     start_time = time.time()
     transactions_html = ""
     dividends = 0
@@ -39,6 +39,8 @@ def render_portfolio(portfolio, tickers, db_companies, cache, tab, db_portfolio)
     summary = dict()
     is_empty = not portfolio["transactions"]
     ref_hist = pd.DataFrame()
+
+    update_cache(cache, pool, portfolio)
     for txn in portfolio["transactions"]:
         transaction_time = time.time()
         print("---- Ticker %s" % (txn["ticker"]))
@@ -97,6 +99,20 @@ def render_portfolio(portfolio, tickers, db_companies, cache, tab, db_portfolio)
     print("Generate figures and plots --- %s seconds ---" % (time.time() - start_time))
 
     return render_template("portfolio.html", **context)
+
+
+def update_cache(cache, pool, portfolio):
+    dates = {}
+    for txn in portfolio["transactions"]:
+        date = datetime.strptime(txn["date"], "%Y-%m-%d")
+        if txn["ticker"] not in dates:
+            dates[txn["ticker"]] = {"start": date, "end": datetime.now()}
+        if date < dates[txn["ticker"]]["start"]:
+            dates[txn["ticker"]]["start"] = date
+    dates = [{"ticker": key, "start": value["start"], "end": value["end"]} for key, value in dates.items()]
+    results = [pool.apply(cache.fetch_history, args=(row["ticker"], row["start"], row["end"])) for row in dates]
+    for index in range(len(dates)):
+        cache.update_history(dates[index]["ticker"], results[index])
 
 
 def get_context(all_tickers, div_1_y, div_3_y, div_5_y, dividends, growth, hist, is_empty, net_dividends, payout,
@@ -316,12 +332,14 @@ def get_all_price_change(hist, is_empty, portfolio):
     year_change = get_price_change(diff_price, 365, portfolio["total"]) if not is_empty else 0
     total_change = diff_price[-1] / portfolio["total"] * 100 if not is_empty else 0
     diff_current_price = diff_price[-1] if not is_empty else 0
+    diff_today_current_price = diff_price[-1] - diff_price[-2] if not is_empty else 0
     return {"today_change": format_percentage_change(daily_change),
             "month_change": format_percentage_change(month_change),
             "total_change": format_percentage_change(total_change),
             "week_change": format_percentage_change(week_change),
             "year_change": format_percentage_change(year_change),
-            "diff_current_price": format_price_change(diff_current_price, portfolio["currency"])}
+            "diff_current_price": format_price_change(diff_current_price, portfolio["currency"]),
+            "diff_today_current_price": format_price_change(diff_today_current_price, portfolio["currency"])}
 
 
 def get_pie_plot(summary, field, value):

@@ -11,6 +11,10 @@ from crawler.companies_crawler import process_companies
 import pymongo
 import pandas as pd
 import os
+from multiprocessing.pool import ThreadPool
+
+global pool
+pool = ThreadPool(processes=5)
 
 
 if __name__ == '__main__':
@@ -24,7 +28,7 @@ if __name__ == '__main__':
         tickers = pd.DataFrame.from_records(db.tickers.find({"Ticker": {"$in": tickers}}))
 
         logs = ""
-        process_companies(companies, tickers, db, logs, 30)
+        process_companies(companies, pool, tickers, db, logs, 30)
         client.close()
     elif action == "screener":
         start_time = time.time()
