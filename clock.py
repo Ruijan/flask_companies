@@ -3,8 +3,11 @@ from crawler.companies_crawler import process_companies
 import pymongo
 import pandas as pd
 import os
+from multiprocessing.pool import ThreadPool
 
 sched = BlockingScheduler()
+global pool
+pool = ThreadPool(processes=5)
 
 
 @sched.scheduled_job('interval', minutes=5)
@@ -18,7 +21,7 @@ def timed_job():
     tickers = pd.DataFrame.from_records(db.tickers.find({"Ticker": {"$in": tickers}}))
     companies = companies.sample(frac=1).reset_index(drop=True)
     logs = ""
-    process_companies(companies, tickers, db, logs, 4*60)
+    process_companies(companies, pool, tickers, db, logs, 4*60)
     client.close()
 
 

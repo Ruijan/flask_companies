@@ -14,7 +14,7 @@ from cache.local_history_cache import LocalHistoryCache
 from cache.currencies import Currencies
 from displayer.portfolio.portfolio_displayer import format_amount
 from flask_simple_geoip import SimpleGeoIP
-from bson.binary import Binary
+import multiprocessing as mp
 
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]
@@ -24,12 +24,14 @@ global mongo
 global tickers
 global history_cache
 global currencies
+global pool
 
 pymongo_connected = False
 if 'MONGO_URI' in os.environ:
     app.config['MONGO_DBNAME'] = 'finance'
     app.config['MONGO_URI'] = os.environ['MONGO_URI'].strip("'").replace('test', app.config['MONGO_DBNAME'])
     app.config["GEOIPIFY_API_KEY"] = os.environ['WHOIS_KEY']
+    pool = None
     mongo = PyMongo(app)
     simple_geoip = SimpleGeoIP(app)
     pymongo_connected = True
@@ -37,17 +39,6 @@ if 'MONGO_URI' in os.environ:
     history_cache = LocalHistoryCache(mongo.db.history)
     tickers = pd.DataFrame.from_records(mongo.db.tickers.find())
     currencies = Currencies()
-    # request_filter = {
-    #    "error_stats": {"$eq": False},
-    #    "country": "France"
-    # }
-    # temp_df = pd.DataFrame.from_records(collection.find(request_filter))
-    # tickers = pd.DataFrame.from_records(mongo.db.tickers.find())
-    # temp_df.columns = [c.replace(' ', '_').lower() for c in temp_df.columns]
-    # df = pd.concat([df, pd.DataFrame(list(df.apply(compute_dividends, axis=1)))], axis=1, sort=False)
-    # print(temp_df.columns)
-    # temp_df = temp_df.set_index("ticker")
-    # companies_cache = temp_df
 
 
 def is_user_connected():
@@ -133,6 +124,10 @@ def show_portfolio():
     global mongo
     global tickers
     global history_cache
+    global pool
+    if pool is None:
+        cpu = mp.cpu_count()
+        pool = mp.Pool(cpu)
     if is_user_connected():
         portfolio_name = request.args.get("name")
         portfolio = mongo.db.portfolio.find_one({"email": session["USER"], "name": portfolio_name})
@@ -161,7 +156,7 @@ def show_portfolio():
                     portfolio["total"] -= portfolio["transactions"][index[0]]["total"]
                     portfolio["transactions"].pop(index[0])
                 mongo.db.portfolio.find_one_and_replace({"email": session["USER"]}, portfolio)
-        element = render_portfolio(portfolio, tickers, companies_cache, history_cache, tab, mongo.db.portfolio)
+        element = render_portfolio(pool, portfolio, tickers, companies_cache, history_cache, tab, mongo.db.portfolio)
         print("Total request time --- %s seconds ---" % (time.time() - request_start))
         return element
     else:
