@@ -24,14 +24,12 @@ global mongo
 global tickers
 global history_cache
 global currencies
-global pool
 
 pymongo_connected = False
-if 'MONGO_URI' in os.environ:
+if 'MONGO_URI' in os.environ and not pymongo_connected:
     app.config['MONGO_DBNAME'] = 'finance'
     app.config['MONGO_URI'] = os.environ['MONGO_URI'].strip("'").replace('test', app.config['MONGO_DBNAME'])
     app.config["GEOIPIFY_API_KEY"] = os.environ['WHOIS_KEY']
-    pool = None
     mongo = PyMongo(app)
     simple_geoip = SimpleGeoIP(app)
     pymongo_connected = True
@@ -124,10 +122,6 @@ def show_portfolio():
     global mongo
     global tickers
     global history_cache
-    global pool
-    if pool is None:
-        cpu = mp.cpu_count()
-        pool = mp.Pool(cpu)
     if is_user_connected():
         portfolio_name = request.args.get("name")
         portfolio = mongo.db.portfolio.find_one({"email": session["USER"], "name": portfolio_name})
@@ -156,7 +150,7 @@ def show_portfolio():
                     portfolio["total"] -= portfolio["transactions"][index[0]]["total"]
                     portfolio["transactions"].pop(index[0])
                 mongo.db.portfolio.find_one_and_replace({"email": session["USER"]}, portfolio)
-        element = render_portfolio(pool, portfolio, tickers, companies_cache, history_cache, tab, mongo.db.portfolio)
+        element = render_portfolio(portfolio, tickers, companies_cache, history_cache, tab, mongo.db.portfolio)
         print("Total request time --- %s seconds ---" % (time.time() - request_start))
         return element
     else:

@@ -107,24 +107,30 @@ def get_corrected_div_values(dividends, stock_splits):
 def get_yearly_dividends(dividends, stock_splits):
     temp_dividends = get_corrected_div_values(dividends, stock_splits)
     dividend_dates = {key: datetime.strptime(key, "%b %d, %Y") for key in dividends.keys()}
-    n_div = {date(v.year, v.month, 1): temp_dividends[k] for k, v in dividend_dates.items()}
+    n_div = dict()
+    for k, v in dividend_dates.items():
+        key = date(v.year, v.month, 1)
+        if key in n_div:
+            n_div[key] += temp_dividends[k]
+        else:
+            n_div[key] = temp_dividends[k]
     years = [key.year for key in n_div.keys()]
     n_div_2 = dict.fromkeys(years, 0)
     for k, v in n_div.items():
         n_div_2[k.year] += n_div[k]
     return pd.DataFrame.from_dict(
-        {'date': list(n_div_2.keys()),
-         'values': list(n_div_2.values())}).set_index("date")
+        {'Date': list(n_div_2.keys()),
+         'values': list(n_div_2.values())}).set_index("Date")
 
 
 def get_continuous_dividend_payment(yearly_dividends):
     count_years = 0
-    shifted_dates = yearly_dividends.values[0:-1]
-    shifted_div = yearly_dividends.index[0:-1]
-    divdiff = (shifted_dates - yearly_dividends.values[1:]) / shifted_dates * 100
-    datediff = (shifted_div - yearly_dividends.index[1:]) / shifted_div * 100
+    shifted_div = yearly_dividends.values[0:-1]
+    shifted_dates = yearly_dividends.index[0:-1]
+    divdiff = (shifted_div - yearly_dividends.values[1:]) / shifted_div * 100
+    datediff = (shifted_dates - yearly_dividends.index[1:]) / shifted_dates * 100
     divdiff = divdiff.flatten()
-    if len(divdiff) > 0:
+    if shifted_dates[0] == datetime.today().year:
         divdiff = np.delete(divdiff, 0)
     nb_tot_years = len(divdiff)
     for index in range(nb_tot_years):
@@ -161,23 +167,14 @@ def get_dividend_features(dividends, stock_splits, payout_ratio, current_yield):
 def rate_dividends(data):
     score = 0
     max_score = 8
+    payout_ratio = 0 if isinstance(data["payout_ratio"], str) else data["payout_ratio"]
     cagr = [data["cagr_1"], data["cagr_3"], data["cagr_5"], data["cagr_10"]]
-    if data["div_yield"] > 0.02:
-        score += 1
-    if data["div_yield"] > 0.05:
-        score += 1
-    if np.std(cagr) < 0.2 * np.mean(cagr) and np.mean(cagr) > 0:
-        score += 1
-    if data["cagr_1"] > 0.03 and data["cagr_3"] > 0.03 and data["cagr_5"] > 0.03:
-        score += 1
-    if data["cagr_1"] < 0 or data["cagr_3"] < 0 or data["cagr_5"] < 0:
-        score -= 1
-    if data["continuous_dividend_growth"] > 8:
-        score += 1
-    if data["continuous_dividend_growth"] > 16:
-        score += 1
-    if not isinstance(data["payout_ratio"], str) and data["payout_ratio"] < 1:
-        score += 1
-    if not isinstance(data["payout_ratio"], str) and data["payout_ratio"] < 0.8:
-        score += 1
+    score += 2 if data["div_yield"] > 0.05 else 2 * data["div_yield"] / 0.05
+    score += 1 if np.std(cagr) < abs(0.2 * np.mean(cagr)) else np.std(cagr) / 0.2 * abs(np.mean(cagr))
+    score += 0.33 if data["cagr_1"] > 0.03 else 0.33 * data["cagr_1"] / 0.03
+    score += 0.33 if data["cagr_3"] > 0.03 else 0.33 * data["cagr_3"] / 0.03
+    score += 0.33 if data["cagr_5"] > 0.03 else 0.33 * data["cagr_5"] / 0.03
+    score += 2 if data["continuous_dividend_growth"] > 16 else 2 * data["continuous_dividend_growth"] / 16
+    score += 0 if payout_ratio > 1 else 2 * (1 - payout_ratio)
+
     return score / max_score

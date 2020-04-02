@@ -2,12 +2,17 @@ from bokeh.embed import components
 from bokeh.models import HoverTool
 from bokeh.plotting import figure
 from flask import render_template
-from all_functions import get_yearly_dividends
+from extractor.dividend_extractor import get_yearly_dividends
 from datetime import datetime
+
+from extractor.dividend_extractor import get_dividend_features
 
 
 def display_company(db_company, ticker):
     dividends = get_yearly_dividends(db_company["dividend_history"], db_company["stock_splits"])
+    dividend_features = get_dividend_features(db_company["dividend_history"], db_company["stock_splits"],
+                                              db_company["stats"]["payout_ratio"],
+                                              db_company["stats"]["forward_annual_dividend_yield"])
     dividends = {'Date': list(dividends.index), 'Dividends': dividends.values.flatten().tolist()}
     dividends["Date"].reverse()
     dividends["Dividends"].reverse()
@@ -34,10 +39,11 @@ def display_company(db_company, ticker):
                            sector=db_company["sector"],
                            script=script,
                            dividends=div,
-                           div_score="{:20,.0f}".format(db_company["div_score"] * 100),
+                           div_score="{:20,.0f}".format(dividend_features["div_score"] * 100),
                            div_yield="{:20,.2f}%".format(db_company["div_yield"] * 100),
-                           cagr3="{:20,.2f}%".format(db_company["cagr_3"] * 100),
-                           cagr5="{:20,.2f}%".format(db_company["cagr_5"] * 100),
-                           payout="{:20,.2f}%".format(db_company["payout_ratio"] * 100),
-                           growth=str(db_company["continuous_dividend_growth"]),
+                           cagr1="{:20,.2f}%".format(dividend_features["cagr_1"] * 100),
+                           cagr3="{:20,.2f}%".format(dividend_features["cagr_3"] * 100),
+                           cagr5="{:20,.2f}%".format(dividend_features["cagr_5"] * 100),
+                           payout="{:20,.2f}%".format(dividend_features["payout_ratio"] * 100),
+                           growth=str(dividend_features["continuous_dividend_growth"]),
                            last_update=datetime.strftime(db_company["last_update"], "%Y-%m-%d"))

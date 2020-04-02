@@ -48,6 +48,7 @@
                     <table class="div_info">
                         <tr>
                             <th><h3>Div. Yield</h3></th>
+                            <th><h3>Last year Growth Rate</h3></th>
                             <th><h3>3 Years Growth Rate</h3></th>
                             <th><h3>5 Years Growth Rate</h3></th>
                             <th><h3>Payout Ratio</h3></th>
@@ -55,6 +56,7 @@
                         </tr>
                         <tr>
                             <td><h2>{{ div_yield | safe}}</h2></td>
+                            <td><h2>{{ cagr1 | safe}}</h2></td>
                             <td><h2>{{ cagr3 | safe}}</h2></td>
                             <td><h2>{{ cagr5 | safe}}</h2></td>
                             <td><h2>{{ payout | safe}}</h2></td>
