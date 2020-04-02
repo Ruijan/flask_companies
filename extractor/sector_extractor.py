@@ -21,7 +21,8 @@ class SectorExtractor(Extractor):
         return temp_data
 
     def should_update(self, db_company):
-        return ("error_sector" in db_company and db_company["error_sector"]) or ("error_sector" not in db_company)
+        return ("error_sector" in db_company and db_company["error_sector"]) or ("error_sector" not in db_company) \
+               or not isinstance(db_company["sector"], str) or db_company["sector"] == "NaN"
 
     def update(self, data, db_company):
         db_company.append(pd.Series(data))

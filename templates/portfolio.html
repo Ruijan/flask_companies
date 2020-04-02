@@ -10,8 +10,7 @@
     <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
     <!-- TO BE REMOVED/> -->
     <script>
-        var tickers = {{tickers | tojson}}
-        var map = {{world_map | safe}}
+        var tickers = {{tickers | tojson}};
     </script>
     <script type="text/javascript" src="../static/js/main.js"></script>
     <link rel="stylesheet" type="text/css" href="../static/styles/main.css">
@@ -53,10 +52,11 @@
                                 <th onclick="sortTable(0, 'summary_table')">Yahoo Ticker</th>
                                 <th onclick="sortTable(1, 'summary_table')">Name</th>
                                 <th onclick="sortTable(2, 'summary_table')">Shares</th>
-                                <th onclick="sortTable(3, 'summary_table')">Dividend (Yield)</th>
-                                <th onclick="sortTable(4, 'summary_table')">Daily Change (%)</th>
-                                <th onclick="sortTable(5, 'summary_table')">Total Change (%)</th>
-                                <th onclick="sortTable(6, 'summary_table')">Total</th>
+                                <th onclick="sortTable(3, 'summary_table')">Price</th>
+                                <th onclick="sortTable(4, 'summary_table')">Dividend (Yield)</th>
+                                <th onclick="sortTable(5, 'summary_table')">Daily Change (%)</th>
+                                <th onclick="sortTable(6, 'summary_table')">Total Change (%)</th>
+                                <th onclick="sortTable(7, 'summary_table')">Total</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -280,20 +280,20 @@
                     <table class="dataframe" id="transaction_table">
                         <tr>
                             <th onclick="sortTable(0, 'transaction_table', 2)">Yahoo Ticker</th>
-                            <th onclick="sortTable(0, 'transaction_table', 2)">Name</th>
-                            <th onclick="sortTable(0, 'transaction_table', 2)">Shares</th>
-                            <th onclick="sortTable(0, 'transaction_table', 2)">Price per Share (COS)</th>
-                            <th onclick="sortTable(0, 'transaction_table', 2)">Price per Share in {{ currency | safe}}</th>
-                            <th onclick="sortTable(0, 'transaction_table', 2)">Fees</th>
-                            <th onclick="sortTable(0, 'transaction_table', 2)">Date</th>
-                            <th onclick="sortTable(0, 'transaction_table', 2)">Total</th>
+                            <th onclick="sortTable(1, 'transaction_table', 2)">Name</th>
+                            <th onclick="sortTable(2, 'transaction_table', 2)">Shares</th>
+                            <th onclick="sortTable(3, 'transaction_table', 2)">Price per Share (COS)</th>
+                            <th onclick="sortTable(4, 'transaction_table', 2)">Price per Share in {{ currency | safe}}</th>
+                            <th onclick="sortTable(5, 'transaction_table', 2)">Fees</th>
+                            <th onclick="sortTable(6, 'transaction_table', 2)">Date</th>
+                            <th onclick="sortTable(7, 'transaction_table', 2)">Total</th>
                             <th></th>
                         </tr>
                         
                         <tr class="input_row">
                             <form id="add_transaction" target="_self" method="post">
                                 <input type="text" name="action" hidden=True value="add">
-                                <input type="number" disabled name="total" value="0" hidden=True id="total_add">
+                                <input type="number" step="0.01" disabled name="total" value="0" hidden=True id="total_add">
                                 <td><input type="text" name="ticker" list="tickers" maxlength=10 required=True placeholder="MSFT" id="ticker_input" onchange="fill_name(tickers);" autocomplete="off">
                                     <datalist id="tickers">
                                         {% for key in tickers.keys() %}
@@ -306,10 +306,10 @@
                                         <option value="{{ value }}">{{ value }}</option>
                                         {% endfor %}
                                     </datalist></td>
-                                <td><input type="number" name="shares" required placeholder="2" id="shares" onChange="computeTotal('{{ currency }}');"></td>
-                                <td><input type="number" name="price_COS" required placeholder="136.54"></td>
-                                <td><input type="number" name="price" required placeholder="125.13" id="price" onChange="computeTotal('{{ currency }}');"></td>
-                                <td><input type="number" name="fees" required placeholder="0.15"></td>
+                                <td><input type="number" step="0.01" name="shares" required placeholder="2" id="shares" onChange="computeTotal('{{ currency }}');"></td>
+                                <td><input type="number" step="0.01" name="price_COS" required placeholder="136.54"></td>
+                                <td><input type="number" step="0.01" name="price" required placeholder="125.13" id="price" onChange="computeTotal('{{ currency }}');"></td>
+                                <td><input type="number" step="0.01" name="fees" required placeholder="0.15"></td>
                                 <td><input type="date" name="date" required placeholder="2000-01-02" value="" id="date_picker"></td>
                                 <td id="total_add_text">0.00€</td>
                                 <td>

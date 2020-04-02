@@ -67,13 +67,16 @@ class LocalHistoryCache(dict):
         end_date, start_date = get_range(end_date, period, start_date)
         temp_data = None
         if key not in self:
+            start = time.time()
             temp_data = {"history": yf.Ticker(key).history(start=start_date, end=end_date),
                     "last_update": datetime.now(),
                     "start_date": start_date,
                     "end_date": end_date}
+            print("GET COMPANY HISTORY %s seconds ---" % (time.time() - start))
         elif key in self:
             temp_data = self[key].copy()
             if start_date < self[key]["start_date"]:
+
                 added_history = yf.Ticker(key).history(start=start_date, end=self[key]["start_date"] - timedelta(days=1))
                 temp_data["history"] = temp_data["history"].append(added_history).sort_values(by=["Date"], ascending=True)
                 temp_data["start_date"] = start_date
@@ -88,4 +91,6 @@ class LocalHistoryCache(dict):
 
     def update_history(self, key, new_value):
         self[key] = new_value
+
+
 
