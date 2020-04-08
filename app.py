@@ -130,7 +130,7 @@ def show_portfolio():
             return redirect(url_for("show_portfolio_manager"))
         if request.method == 'POST':
             data = request.form.to_dict(flat=True)
-            if data["action"] == "add":
+            if data["action"] == "add_transaction":
                 portfolio["id_txn"] += 1
                 data["id"] = portfolio["id_txn"]
                 data["shares"] = int(data["shares"])
@@ -161,7 +161,7 @@ def show_portfolio():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     global mongo
-    if session.get("USER"):
+    if is_user_connected():
         return redirect(url_for("show_portfolio"))
     if request.method == 'GET':
         return render_template("login.html")
