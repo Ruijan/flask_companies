@@ -60,6 +60,7 @@ class LocalHistoryCache(dict):
                          "last_update": datetime.now(),
                          "start_date": datetime.today() - timedelta(days=1),
                          "end_date": datetime.today()}
+            self[key]["history"] = self[key]["history"].loc[~self[key]["history"].index.duplicated(keep='first')]
         last_day_close = self[key]["history"].loc[self[key]["history"].index.max(), :]
         return last_day_close
 
@@ -75,7 +76,8 @@ class LocalHistoryCache(dict):
             print("GET COMPANY HISTORY %s seconds ---" % (time.time() - start))
         elif key in self:
             temp_data = self[key].copy()
-            if start_date < self[key]["start_date"]:
+            diff_time = self[key]["start_date"] - start_date
+            if diff_time.days > 0:
                 added_history = yf.Ticker(key).history(start=start_date,
                                                        end=self[key]["start_date"] - timedelta(days=1))
                 temp_data["history"] = temp_data["history"].append(added_history).sort_values(by=["Date"],
@@ -83,6 +85,7 @@ class LocalHistoryCache(dict):
 
                 temp_data["start_date"] = start_date
         temp_data["history"]["Close"] = temp_data["history"]["Close"].fillna(method='ffill').fillna(method='bfill')
+        temp_data["history"] = temp_data["history"].loc[~temp_data["history"].index.duplicated(keep='first')]
         fifteen_minutes = 60 * 15
         if (datetime.now() - temp_data["last_update"]).seconds > fifteen_minutes:
             today_hist = yf.Ticker(key).history(period='1d')
@@ -103,7 +106,10 @@ class LocalHistoryCache(dict):
             data = yf.download(tickers, start=start_date, end=end_date, group_by='ticker', auto_adjust=True, actions=True)
 
             for key in keys_to_download:
-                temp_data = data[key]
+                if len(keys_to_download) > 1:
+                    temp_data = data[key]
+                else:
+                    temp_data = data
                 temp_data = temp_data.fillna(method='ffill')
                 temp_data = temp_data.fillna(method='bfill')
                 temp_data = temp_data.loc[~temp_data.index.duplicated(keep='first')]
