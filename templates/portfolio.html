@@ -62,7 +62,7 @@
                         <tbody>
                             {% if is_empty %}
                             <tr>
-                                <td colspan="7"><p class="empty_transaction" onclick="openTab(event, 'Transactions')">No transaction added. Click here to add a transaction.</p></td>
+                                <td colspan="8"><p class="empty_transaction" onclick="openTab(event, 'Transactions')">No transaction added. Click here to add a transaction.</p></td>
                             </tr>
                             {% else %}
                             {{ portfolio | safe }}
@@ -152,7 +152,7 @@
                                         
                                     {% endfor %}
                                 {% else %}
-                                    <td colspan="2">No upcoming dividends</td>
+                                    <td colspan="3">No upcoming dividends</td>
                                 {% endif %}
                             </tbody>
                         </table>
@@ -292,7 +292,7 @@
                         
                         <tr class="input_row">
                             <form id="add_transaction" target="_self" method="post">
-                                <input type="text" name="action" hidden=True value="add">
+                                <input type="text" name="action" hidden=True value="add_transaction">
                                 <input type="number" step="0.01" disabled name="total" value="0" hidden=True id="total_add">
                                 <td><input type="text" name="ticker" list="tickers" maxlength=10 required=True placeholder="MSFT" id="ticker_input" onchange="fill_name(tickers);" autocomplete="off">
                                     <datalist id="tickers">

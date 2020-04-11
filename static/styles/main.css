@@ -147,10 +147,10 @@ body {
 
 .menu {
     position: fixed;
-    top: 95px;
+    top: 90px;
     float: left;
     text-align: center;
-    padding: 15px 15px 15px 15px;
+    padding: 0px 15px 15px 15px;
 }
 
 .menu_button{
@@ -340,6 +340,7 @@ body {
         background-color: #302E2E;
         top: 0;
         margin-left: 0;
+        padding-top: 15px;
     }
 
     .pie_plot {
