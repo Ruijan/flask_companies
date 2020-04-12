@@ -2,10 +2,8 @@ from bokeh.embed import components
 from bokeh.models import HoverTool
 from bokeh.plotting import figure
 from flask import render_template
-from extractor.dividend_extractor import get_yearly_dividends
+from src.extractor.dividend_extractor import get_yearly_dividends, get_dividend_features
 from datetime import datetime
-
-from extractor.dividend_extractor import get_dividend_features
 
 
 def display_company(db_company, ticker):

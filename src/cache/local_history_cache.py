@@ -9,24 +9,17 @@ def get_range(end_date, period, start_date):
     if start_date is None:
         if period == "max":
             start_date = datetime(1900, 1, 1)
-        elif period == "1d":
-            start_date = end_date - timedelta(days=1)
-        elif period == "5d":
-            start_date = end_date - timedelta(days=5)
-        elif period == "1m":
-            start_date = end_date - timedelta(months=1)
-        elif period == "3m":
-            start_date = end_date - timedelta(months=3)
-        elif period == "6m":
-            start_date = end_date - timedelta(months=6)
-        elif period == "1y":
-            start_date = end_date - timedelta(years=1)
-        elif period == "3y":
-            start_date = end_date - timedelta(years=3)
-        elif period == "5y":
-            start_date = end_date - timedelta(years=5)
-        elif period == "10y":
-            start_date = end_date - timedelta(years=10)
+        else:
+            amount = int(period[0])
+            element_of_time = period[1]
+            if element_of_time == "d":
+                start_date = end_date - timedelta(days=amount)
+            elif element_of_time == "w":
+                start_date = end_date - timedelta(weeks=amount)
+            elif element_of_time == "m":
+                start_date = end_date - timedelta(weeks=4*amount)
+            elif element_of_time == "y":
+                start_date = end_date - timedelta(weeks=52 * amount)
     return end_date, start_date
 
 
@@ -41,6 +34,7 @@ class LocalHistoryCache(dict):
         return LocalHistoryCache.__instance
 
     def __init__(self, collection):
+        super().__init__()
         if LocalHistoryCache.__instance is not None:
             raise Exception("This class is a singleton!")
         else:

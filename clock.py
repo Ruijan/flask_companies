@@ -1,5 +1,5 @@
 from apscheduler.schedulers.blocking import BlockingScheduler
-from crawler.companies_crawler import process_companies
+from src.crawler import process_companies
 import pymongo
 import pandas as pd
 import os

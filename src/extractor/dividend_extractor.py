@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
-from extractor.extractor import Extractor
+from src.extractor.extractor import Extractor
 from datetime import datetime, date
-from crawler.cleaner import is_american_company, check_key_exists, update_array
+from src.crawler.cleaner import is_american_company, check_key_exists, update_array
 import pandas as pd
 import numpy as np
 
