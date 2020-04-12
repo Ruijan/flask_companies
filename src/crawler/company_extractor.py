@@ -1,11 +1,11 @@
 import requests
 from datetime import datetime
 
-from extractor.dividend_extractor import DividendExtractor
-from extractor.financial_extractor import FinancialExtractor
-from extractor.sector_extractor import SectorExtractor
-from extractor.stat_extractor import StatExtractor
-from extractor.stock_split_extractor import StockSplitExtractor
+from src.extractor.dividend_extractor import DividendExtractor
+from src.extractor.financial_extractor import FinancialExtractor
+from src.extractor.sector_extractor import SectorExtractor
+from src.extractor.stat_extractor import StatExtractor
+from src.extractor.stock_split_extractor import StockSplitExtractor
 
 
 class CompanyExtractor:

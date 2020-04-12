@@ -4,20 +4,19 @@ import time
 import pandas as pd
 from flask import Flask, session, render_template, redirect, url_for
 from flask_pymongo import PyMongo, request
-from cache.companies_cache import CompaniesCache
-from displayer.company_displayer import display_company
+from src.cache.companies_cache import CompaniesCache
+from src.displayer.company_displayer import display_company
 from all_functions import print_companies_to_html
 from cryptography.fernet import Fernet
 from datetime import datetime
-from displayer.portfolio.portfolio_displayer import render_portfolio, compute_history, update_companies_cache, \
+from src.displayer.portfolio.portfolio_displayer import render_portfolio, compute_history, update_companies_cache, \
     add_txn_hist, get_reference_history, get_current_conversion_rate, add_txn_to_portfolio_summary, \
     add_txn_to_portfolio_stats, \
     postprocess_portfolio, remove_txn_from_portfolio_summary, remove_txn_hist
-from cache.local_history_cache import LocalHistoryCache
-from cache.currencies import Currencies
-from displayer.portfolio.portfolio_displayer import format_amount
+from src.cache.local_history_cache import LocalHistoryCache
+from src.cache.currencies import Currencies
+from src.displayer.portfolio.portfolio_displayer import format_amount
 from flask_simple_geoip import SimpleGeoIP
-import multiprocessing as mp
 
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]

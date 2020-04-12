@@ -1,6 +1,5 @@
 import json
 import math
-import time
 from datetime import datetime, timedelta
 from math import pi
 
@@ -14,13 +13,13 @@ from babel.numbers import format_currency
 from bokeh.embed import components
 from bokeh.models import ColumnDataSource
 from bokeh.models import HoverTool
-from bokeh.palettes import Accent6, mpl
+from bokeh.palettes import Accent6
 from bokeh.plotting import figure
 from bokeh.transform import cumsum
 from flask import render_template
 from pandas import Series
 from bokeh.models import GeoJSONDataSource
-from extractor.dividend_extractor import compute_dividends
+from src.extractor.dividend_extractor import compute_dividends
 import matplotlib.cm
 from bokeh.models import ColorBar, LogColorMapper, LogTicker, LinearColorMapper, BasicTicker
 

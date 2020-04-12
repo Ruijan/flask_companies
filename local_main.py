@@ -7,7 +7,7 @@ Created on Mon Feb 24 21:05:20 2020
 #import all_functions
 import time
 from all_functions import compute_dividends
-from crawler.companies_crawler import process_companies
+from src.crawler import process_companies
 import pymongo
 import pandas as pd
 import os

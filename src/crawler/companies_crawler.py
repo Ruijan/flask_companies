@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import time
 from datetime import datetime
-from crawler.company_extractor import CompanyExtractor
+from src.crawler.company_extractor import CompanyExtractor
 
 
 def process_companies(db_companies, pool, companies, db, logs, max_time):
