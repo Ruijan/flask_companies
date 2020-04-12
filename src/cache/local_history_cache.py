@@ -34,6 +34,7 @@ class LocalHistoryCache(dict):
         return LocalHistoryCache.__instance
 
     def __init__(self, collection):
+        super().__init__()
         if LocalHistoryCache.__instance is not None:
             raise Exception("This class is a singleton!")
         else:

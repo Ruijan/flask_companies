@@ -1,5 +1,5 @@
 from src.extractor.extractor import Extractor
-from src.crawler import is_date, str_amount_to_number, clean_key, update_array
+from src.crawler.cleaner import is_date, str_amount_to_number, clean_key, update_array
 from datetime import datetime
 from bs4 import BeautifulSoup
 from numpy import any

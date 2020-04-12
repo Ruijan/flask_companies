@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 from src.extractor.extractor import Extractor
 from datetime import datetime
-from src.crawler import check_key_exists, update_array, clean_key
+from src.crawler.cleaner import check_key_exists, update_array, clean_key
 
 
 class FinancialExtractor(Extractor):

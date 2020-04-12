@@ -1,6 +1,6 @@
 from src.extractor.extractor import Extractor
 from bs4 import BeautifulSoup
-from src.crawler import update_array
+from src.crawler.cleaner import update_array
 from datetime import datetime
 
 

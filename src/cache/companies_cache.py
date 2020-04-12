@@ -1,5 +1,6 @@
 from datetime import datetime
 
+
 class CompaniesCache(dict):
     __instance = None
     __collection = None
@@ -11,6 +12,7 @@ class CompaniesCache(dict):
         return CompaniesCache.__instance
 
     def __init__(self, collection):
+        super().__init__()
         if CompaniesCache.__instance is not None:
             raise Exception("This class is a singleton!")
         else:
