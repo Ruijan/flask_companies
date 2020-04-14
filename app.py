@@ -9,10 +9,8 @@ from src.displayer.company_displayer import display_company
 from all_functions import print_companies_to_html
 from cryptography.fernet import Fernet
 from datetime import datetime
-from src.displayer.portfolio.portfolio_displayer import render_portfolio, compute_history, update_companies_cache, \
-    add_txn_hist, get_reference_history, get_current_conversion_rate, add_txn_to_portfolio_summary, \
-    add_txn_to_portfolio_stats, \
-    postprocess_portfolio, remove_txn_from_portfolio_summary, remove_txn_hist
+from src.displayer.portfolio.portfolio_displayer import render_portfolio
+from src.portfolio import Portfolio
 from src.cache.local_history_cache import LocalHistoryCache
 from src.cache.currencies import Currencies
 from src.displayer.portfolio.portfolio_displayer import format_amount
@@ -90,8 +88,8 @@ def show_portfolio_manager():
             portfolio = mongo.db.portfolio.find_one({"email": session["USER"], "name": data["name"]})
             if portfolio is None:
                 portfolio = {"email": session["USER"], "name": data["name"], "transactions": [], "total": 0,
-                             "currency": data["currency"], "invested": 0, "id_txn": 0, "history": {}, "current": 0,
-                             "summary": {}, "stats": {}}
+                             "currency": data["currency"], "id_txn": 0, "history": {}, "current": 0,
+                             "summary": {}, "stats": {}, "last_update": datetime.now()}
                 mongo.db.portfolio.insert_one(portfolio)
                 return redirect(url_for("show_portfolio", name=data["name"]))
             else:
@@ -127,19 +125,26 @@ def show_portfolio():
     global history_cache
     if is_user_connected():
         portfolio_name = request.args.get("name")
-        portfolio = mongo.db.portfolio.find_one({"email": session["USER"], "name": portfolio_name})
+        portfolio = Portfolio.retrieve_from_database(mongo.db.portfolio, session["USER"], portfolio_name)
         tab = "Summary"
         if portfolio is None:
             return redirect(url_for("show_portfolio_manager"))
         if request.method == 'POST':
             data = request.form.to_dict(flat=True)
+            companies_cache(companies_cache, portfolio.transactions)
             if data["action"] == "add_transaction":
-                add_transaction(data, portfolio, history_cache, companies_cache, mongo.db.portfolio)
+                portfolio.add_transaction(data, history_cache, companies_cache, mongo.db.portfolio)
                 tab = "Transactions"
             elif data["action"] == "del":
                 if "id" in data:
-                    remove_transaction(data, portfolio, history_cache, companies_cache, mongo.db.portfolio)
-        element = render_portfolio(portfolio, tickers, companies_cache, history_cache, tab, mongo.db.portfolio)
+                    portfolio.remove_transaction(data, history_cache, companies_cache, mongo.db.portfolio)
+        companies_cache.update_from_transactions(portfolio.transactions)
+        if 60 < (datetime.now() - portfolio.last_update).seconds < 24 * 60 * 60:
+            history_cache.today_update_from_transactions(portfolio.transactions, companies_cache, portfolio.currency)
+        else:
+            history_cache.update_from_transactions(portfolio.transactions, companies_cache, portfolio.currency)
+        portfolio.update(history_cache, companies_cache, mongo.db.portfolio)
+        element = render_portfolio(portfolio, tickers, tab)
         print("Total request time --- %s seconds ---" % (time.time() - request_start))
         return element
     else:
@@ -147,97 +152,11 @@ def show_portfolio():
         return redirect(url_for("login"))
 
 
-def add_transaction(data, portfolio, cache, companies_cache, db_portfolio):
-    portfolio["id_txn"] += 1
-    data["id"] = portfolio["id_txn"]
-    data["shares"] = int(data["shares"])
-    data["price_COS"] = float(data["price_COS"])
-    data["price"] = float(data["price"])
-    data["fees"] = float(data["fees"])
-    data["total"] = data["price"] * data["shares"]
-    data.pop("action")
-    portfolio["transactions"].append(data)
-    portfolio["total"] += data["total"]
-    company = companies_cache.get(data["ticker"])
-    update_companies_cache(companies_cache, portfolio)
-    txn_history = compute_history(cache, portfolio["currency"], data, company["currency"], company["country"])
-    ref_hist = pd.DataFrame() if not portfolio["history"] else pd.DataFrame.from_dict(portfolio["history"])[["S&P500","Date", "Amount", "Net_Dividends", "Dividends"]]
-    if not ref_hist.empty:
-        ref_hist = ref_hist.rename(columns={"S&P500": "Close"}).set_index("Date")
-    hist = pd.DataFrame() if not portfolio["history"] else pd.DataFrame.from_dict(portfolio["history"]).drop("S&P500", axis=1).set_index("Date")
-    if "history" not in portfolio:
-        portfolio["history"] = pd.DataFrame()
-    else:
-        portfolio["history"] = pd.DataFrame.from_dict(portfolio["history"])
-        if len(portfolio["history"]) > 0:
-            portfolio["history"] = portfolio["history"].set_index("Date")
-    if "summary" not in portfolio:
-        portfolio["summary"] = dict()
-    hist = add_txn_hist(hist, txn_history)
-    temp_txn = data.copy()
-    ref_txn_hist = get_reference_history(cache, portfolio, temp_txn)
-    ref_hist = add_txn_hist(ref_hist, ref_txn_hist)
-    conversion_rate = get_current_conversion_rate(company["currency"], portfolio["currency"], cache)
-    c_div = company["stats"]["forward_annual_dividend_rate"] * temp_txn["shares"] * conversion_rate
-    add_txn_to_portfolio_summary(c_div, company, portfolio["summary"], data, txn_history)
-    portfolio["stats"] = {"div_rate": 0, "net_div_rate": 0, "cagr1": 0, "cagr3": 0, "cagr5": 0, "payout_ratio": 0,
-                          "years_of_growth": 0}
-    for txn in portfolio["transactions"]:
-        conversion_rate = get_current_conversion_rate(company["currency"], portfolio["currency"], cache)
-        c_div = company["stats"]["forward_annual_dividend_rate"] * txn["shares"] * conversion_rate
-        add_txn_to_portfolio_stats(c_div, company, portfolio["stats"], txn)
-    for ticker, position in portfolio["summary"].items():
-        position["total_change_perc"] = position["total_change"] / position["total"] * 100
-        position["daily_change_perc"] = position["daily_change"] / position["previous_total"] * 100
-        position["current_price"] = cache.get_last_day(ticker)["Close"]
-    if portfolio["transactions"]:
-        hist["S&P500"] = ref_hist["Close"]
-    postprocess_portfolio(db_portfolio, hist, not portfolio["transactions"], portfolio)
-
-
-def remove_transaction(data, portfolio, cache, companies_cache, db_portfolio):
-    index = [index for index in range(len(portfolio["transactions"]))
-             if portfolio["transactions"][index]["id"] == int(data["id"])]
-    txn = portfolio["transactions"].pop(index[0])
-    portfolio["total"] -= txn["total"]
-    company = companies_cache.get(txn["ticker"])
-    update_companies_cache(companies_cache, portfolio)
-    txn_history = compute_history(cache, portfolio["currency"], txn, company["currency"], company["country"])
-    ref_hist = pd.DataFrame() if not portfolio["history"] else pd.DataFrame.from_dict(portfolio["history"])[["S&P500","Date", "Amount", "Net_Dividends", "Dividends"]]
-    if not ref_hist.empty:
-        ref_hist = ref_hist.rename(columns={"S&P500": "Close"}).set_index("Date")
-    hist = pd.DataFrame() if not portfolio["history"] else pd.DataFrame.from_dict(portfolio["history"]).drop("S&P500", axis=1).set_index("Date")
-    if "history" not in portfolio:
-        portfolio["history"] = pd.DataFrame()
-    else:
-        portfolio["history"] = pd.DataFrame.from_dict(portfolio["history"])
-        if len(portfolio["history"]) > 0:
-            portfolio["history"] = portfolio["history"].set_index("Date")
-    if "summary" not in portfolio:
-        portfolio["summary"] = dict()
-    hist = remove_txn_hist(hist, txn_history)
-    temp_txn = txn.copy()
-    ref_txn_hist = get_reference_history(cache, portfolio, temp_txn)
-    ref_hist = remove_txn_hist(ref_hist, ref_txn_hist)
-    conversion_rate = get_current_conversion_rate(company["currency"], portfolio["currency"], cache)
-    c_div = company["stats"]["forward_annual_dividend_rate"] * temp_txn["shares"] * conversion_rate
-    remove_txn_from_portfolio_summary(c_div, portfolio["summary"], txn, txn_history)
-    portfolio["stats"] = {"div_rate": 0, "net_div_rate": 0, "cagr1": 0, "cagr3": 0, "cagr5": 0, "payout_ratio": 0,
-                          "years_of_growth": 0}
-    for temp_txn in portfolio["transactions"]:
-        conversion_rate = get_current_conversion_rate(company["currency"], portfolio["currency"], cache)
-        c_div = company["stats"]["forward_annual_dividend_rate"] * temp_txn["shares"] * conversion_rate
-        add_txn_to_portfolio_stats(c_div, company, portfolio["stats"], temp_txn)
-    hist["S&P500"] = ref_hist["Close"]
-    portfolio["history"] = hist
-    postprocess_portfolio(db_portfolio, hist, not portfolio["transactions"], portfolio)
-
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     global mongo
     if is_user_connected():
-        return redirect(url_for("show_portfolio"))
+        return redirect(url_for("show_portfolio_manager"))
     if request.method == 'GET':
         return render_template("login.html")
     if request.method == 'POST':
@@ -266,7 +185,7 @@ def login():
                 session["KEY"] = os.environ["MONGO_KEY"]
                 session["USER"] = user["email"]
                 session.new = True
-                return redirect(url_for("show_portfolio"))
+                return redirect(url_for("show_portfolio_manager"))
             else:
                 return render_template("login.html", error_login="Wrong password")
         else:
@@ -288,7 +207,7 @@ def logout():
 def register():
     global mongo
     if is_user_connected():
-        return redirect(url_for("show_portfolio"))
+        return redirect(url_for("show_portfolio_manager"))
     if request.method == 'GET':
         return render_template("register.html")
     if request.method == 'POST':
@@ -313,7 +232,7 @@ def register():
             session["KEY"] = os.environ["MONGO_KEY"]
             session["USER"] = data["email"]
             session.new = True
-            return redirect(url_for("show_portfolio"))
+            return redirect(url_for("show_portfolio_manager"))
         else:
             return render_template("login.html", error_login="Email already in database. Try signing in")
 

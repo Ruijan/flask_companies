@@ -1,4 +1,12 @@
+import math
 from datetime import datetime
+
+import ccy
+import numpy as np
+import pycountry
+from pandas import Series
+
+from src.extractor.dividend_extractor import compute_dividends
 
 
 class CompaniesCache(dict):
@@ -39,3 +47,20 @@ class CompaniesCache(dict):
             company = self.__collection.find_one({"ticker": key})
             company["last_checked"] = datetime.now()
             self[key] = company
+
+    def update_from_transactions(self, transactions):
+        for txn in transactions:
+            company = self.get(txn["ticker"])
+            should_update = False
+            if "currency" not in company or (not isinstance(company["currency"], str) and math.isnan(company["currency"])):
+                country = company["country"] if company["country"] != "USA" else "United States"
+                company["currency"] = ccy.countryccy(pycountry.countries.get(name=country).alpha_2.lower())
+                should_update = True
+            if "cagr_3" not in company or np.isnan(company["cagr_3"]):
+                div_info = Series(compute_dividends(company))
+                company = {**company, **div_info}
+                should_update = True
+            if should_update:
+                self.update_company(company)
+            company["stats"] = dict(
+                (k.lower().replace(" ", "_"), v) if isinstance(k, str) else (k, v) for k, v in company["stats"].items())

@@ -2,6 +2,8 @@ import time
 from datetime import datetime, timedelta
 import yfinance as yf
 
+from src.portfolio import get_currency_ticker
+
 
 def get_range(end_date, period, start_date):
     if end_date is None:
@@ -117,3 +119,39 @@ class LocalHistoryCache(dict):
 
     def update_history(self, key, new_value):
         self[key] = new_value
+
+    def today_update_from_transactions(self, transactions, company_cache, currency):
+        tickers = []
+        for txn in transactions:
+            if txn["ticker"] not in tickers:
+                tickers.append(txn["ticker"])
+            currency_ticker = get_currency_ticker(company_cache[txn["ticker"]]["currency"], currency)
+            if currency_ticker not in tickers:
+                tickers.append(currency_ticker)
+        tickers.append("^GSPC")
+        results = self.fetch_multiple_histories(tickers, period="1d")
+        for ticker in tickers:
+            self.update_history(ticker, results[ticker])
+
+    def update_from_transactions(self, transactions, company_cache, currency):
+        dates = {}
+        now = datetime.now()
+        min_date = now
+        for txn in transactions:
+            date = datetime.strptime(txn["date"], "%Y-%m-%d")
+            currency_ticker = get_currency_ticker(company_cache[txn["ticker"]]["currency"], currency)
+            if currency_ticker not in dates:
+                dates[currency_ticker] = {"start": date, "end": now}
+            if date < dates[currency_ticker]["start"]:
+                dates[currency_ticker]["start"] = date
+            if txn["ticker"] not in dates:
+                dates[txn["ticker"]] = {"start": date, "end": now}
+            if date < dates[txn["ticker"]]["start"]:
+                dates[txn["ticker"]]["start"] = date
+            if date < min_date:
+                min_date = date
+        if len(dates) > 0:
+            dates["^GSPC"] = {"start": min_date, "end": now}
+        results = self.fetch_multiple_histories(dates.keys(), min_date, now)
+        for ticker in dates.keys():
+            self.update_history(ticker, results[ticker])
