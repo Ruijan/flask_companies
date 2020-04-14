@@ -5,14 +5,17 @@ from src.cache.local_history_cache import get_range, LocalHistoryCache
 
 
 class HistoryCacheTestCase(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(HistoryCacheTestCase, self).__init__(*args, **kwargs)
+        self.cache = LocalHistoryCache.get_instance()
+
     def test_init_twice_should_throw(self):
-        LocalHistoryCache(None)
         with self.assertRaises(Exception) as context:
-            LocalHistoryCache(None)
+            LocalHistoryCache()
         self.assertTrue('This class is a singleton!' in str(context.exception))
 
     def test_get_one_week_data(self):
-        cache = LocalHistoryCache(None)
+        pass
 
     def test_get_one_day_range(self):
         today = datetime.today()

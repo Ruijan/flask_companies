@@ -28,6 +28,13 @@ def get_range(end_date, period, start_date):
 class LocalHistoryCache(dict):
     __instance = None
 
+    @staticmethod
+    def get_instance():
+        if LocalHistoryCache.__instance is not None:
+            return LocalHistoryCache.__instance
+        else:
+            return LocalHistoryCache()
+
     def __init__(self):
         super().__init__()
         if LocalHistoryCache.__instance is not None:
