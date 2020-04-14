@@ -1,11 +1,10 @@
 import json
 import math
-from datetime import datetime, timedelta
+from datetime import datetime
 from math import pi
 
 from bokeh.colors import RGB
 from colour import Color
-import ccy
 import numpy as np
 import pandas as pd
 import pycountry
@@ -17,11 +16,8 @@ from bokeh.palettes import Accent6
 from bokeh.plotting import figure
 from bokeh.transform import cumsum
 from flask import render_template
-from pandas import Series
 from bokeh.models import GeoJSONDataSource
 
-from src.displayer.portfolio.portfolio import get_currency_ticker
-from src.extractor.dividend_extractor import compute_dividends
 import matplotlib.cm
 from bokeh.models import ColorBar, LogColorMapper, LogTicker, LinearColorMapper, BasicTicker
 
@@ -42,62 +38,6 @@ def render_portfolio(portfolio, tickers, tab):
     context.update(get_world_maps(portfolio.positions))
     context.update(get_dividends_info(portfolio.history, portfolio.stats, portfolio.currency, is_empty))
     return render_template("portfolio.html", **context)
-
-
-def update_companies_cache(cache, transactions):
-    for txn in transactions:
-        company = cache.get(txn["ticker"])
-        should_update = False
-        if "currency" not in company or (not isinstance(company["currency"], str) and math.isnan(company["currency"])):
-            country = company["country"] if company["country"] != "USA" else "United States"
-            company["currency"] = ccy.countryccy(pycountry.countries.get(name=country).alpha_2.lower())
-            should_update = True
-        if "cagr_3" not in company or np.isnan(company["cagr_3"]):
-            div_info = Series(compute_dividends(company))
-            company = {**company, **div_info}
-            should_update = True
-        if should_update:
-            cache.update_company(company)
-        company["stats"] = dict(
-            (k.lower().replace(" ", "_"), v) if isinstance(k, str) else (k, v) for k, v in company["stats"].items())
-
-
-def update_today_cache(cache, transactions, company_cache, currency):
-    tickers = []
-    for txn in transactions:
-        if txn["ticker"] not in tickers:
-            tickers.append(txn["ticker"])
-        currency_ticker = get_currency_ticker(company_cache[txn["ticker"]]["currency"], currency)
-        if currency_ticker not in tickers:
-            tickers.append(currency_ticker)
-    tickers.append("^GSPC")
-    results = cache.fetch_multiple_histories(tickers, period="1d")
-    for ticker in tickers:
-        cache.update_history(ticker, results[ticker])
-
-
-def update_cache(cache, transactions, company_cache, currency):
-    dates = {}
-    now = datetime.now()
-    min_date = now
-    for txn in transactions:
-        date = datetime.strptime(txn["date"], "%Y-%m-%d")
-        currency_ticker = get_currency_ticker(company_cache[txn["ticker"]]["currency"], currency)
-        if currency_ticker not in dates:
-            dates[currency_ticker] = {"start": date, "end": now}
-        if date < dates[currency_ticker]["start"]:
-            dates[currency_ticker]["start"] = date
-        if txn["ticker"] not in dates:
-            dates[txn["ticker"]] = {"start": date, "end": now}
-        if date < dates[txn["ticker"]]["start"]:
-            dates[txn["ticker"]]["start"] = date
-        if date < min_date:
-            min_date = date
-    if len(dates) > 0:
-        dates["^GSPC"] = {"start": min_date, "end": now}
-    results = cache.fetch_multiple_histories(dates.keys(), min_date, now)
-    for ticker in dates.keys():
-        cache.update_history(ticker, results[ticker])
 
 
 def get_transaction_table(portfolio):

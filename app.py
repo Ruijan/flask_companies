@@ -9,9 +9,8 @@ from src.displayer.company_displayer import display_company
 from all_functions import print_companies_to_html
 from cryptography.fernet import Fernet
 from datetime import datetime
-from src.displayer.portfolio.portfolio_displayer import render_portfolio, update_companies_cache, update_today_cache, \
-    update_cache
-from src.displayer.portfolio.portfolio import Portfolio
+from src.displayer.portfolio.portfolio_displayer import render_portfolio
+from src.portfolio import Portfolio
 from src.cache.local_history_cache import LocalHistoryCache
 from src.cache.currencies import Currencies
 from src.displayer.portfolio.portfolio_displayer import format_amount
@@ -132,18 +131,18 @@ def show_portfolio():
             return redirect(url_for("show_portfolio_manager"))
         if request.method == 'POST':
             data = request.form.to_dict(flat=True)
-            update_companies_cache(companies_cache, portfolio.transactions)
+            companies_cache(companies_cache, portfolio.transactions)
             if data["action"] == "add_transaction":
                 portfolio.add_transaction(data, history_cache, companies_cache, mongo.db.portfolio)
                 tab = "Transactions"
             elif data["action"] == "del":
                 if "id" in data:
                     portfolio.remove_transaction(data, history_cache, companies_cache, mongo.db.portfolio)
-        update_companies_cache(companies_cache, portfolio.transactions)
+        companies_cache.update_from_transactions(portfolio.transactions)
         if 60 < (datetime.now() - portfolio.last_update).seconds < 24 * 60 * 60:
-            update_today_cache(history_cache, portfolio.transactions, companies_cache, portfolio.currency)
+            history_cache.today_update_from_transactions(portfolio.transactions, companies_cache, portfolio.currency)
         else:
-            update_cache(history_cache, portfolio.transactions, companies_cache, portfolio.currency)
+            history_cache.update_from_transactions(portfolio.transactions, companies_cache, portfolio.currency)
         portfolio.update(history_cache, companies_cache, mongo.db.portfolio)
         element = render_portfolio(portfolio, tickers, tab)
         print("Total request time --- %s seconds ---" % (time.time() - request_start))
