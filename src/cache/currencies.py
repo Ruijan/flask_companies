@@ -1,6 +1,3 @@
-global currencies
-
-
 class Currencies(dict):
     __instance = None
 
@@ -132,7 +129,6 @@ class Currencies(dict):
                                "BWP": "Pula",
                                "QAR": "Qatari Rial",
                                "GTQ": "Quetzal",
-                               "ZAR": "Rand",
                                "OMR": "Rial Omani",
                                "KHR": "Riel",
                                "MVR": "Rufiyaa",

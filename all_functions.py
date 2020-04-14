@@ -7,7 +7,6 @@ Created on Mon Feb 24 13:00:36 2020
 from datetime import datetime, date
 import pandas as pd
 import numpy as np
-import math
 
 
 def print_companies_to_html(df):

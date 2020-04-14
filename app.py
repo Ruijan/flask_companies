@@ -18,14 +18,12 @@ from flask_simple_geoip import SimpleGeoIP
 
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]
-global pymongo_connected
-global companies_cache
-global mongo
-global tickers
-global history_cache
-global currencies
-
 pymongo_connected = False
+companies_cache = None
+mongo = None
+tickers = None
+history_cache = LocalHistoryCache()
+currencies = Currencies()
 if 'MONGO_URI' in os.environ and not pymongo_connected:
     app.config['MONGO_DBNAME'] = 'finance'
     app.config['MONGO_URI'] = os.environ['MONGO_URI'].strip("'").replace('test', app.config['MONGO_DBNAME'])
@@ -34,9 +32,8 @@ if 'MONGO_URI' in os.environ and not pymongo_connected:
     simple_geoip = SimpleGeoIP(app)
     pymongo_connected = True
     companies_cache = CompaniesCache(mongo.db.cleaned_companies)
-    history_cache = LocalHistoryCache(mongo.db.history)
     tickers = pd.DataFrame.from_records(mongo.db.tickers.find())
-    currencies = Currencies()
+
 
 
 def is_user_connected():
