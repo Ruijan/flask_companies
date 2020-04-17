@@ -145,7 +145,7 @@ def get_world_map_plot(summary, value):
 
 def group_value_by_country(summary, value):
     amount_invested = {}
-    for ticker, company in summary.items():
+    for _, company in summary.items():
         country = company["country"] if company["country"] != "USA" else "United States"
         country = pycountry.countries.get(name=country).alpha_3
         if country not in amount_invested:
@@ -412,11 +412,11 @@ def get_portfolio_history_plot(hist):
         p = figure(sizing_mode='scale_width', toolbar_location=None, x_axis_type='datetime',
                    aspect_ratio=1920.0 / 1080.0)
         p.toolbar.active_drag = None
-        amount_plot = p.line(x="Date", y="Amount", line_width=5, source=ColumnDataSource(data=data), color=Accent6[0],
+        p.line(x="Date", y="Amount", line_width=5, source=ColumnDataSource(data=data), color=Accent6[0],
                              legend_label="Invested")
         close_plot = p.line(x="Date", y="Close", line_width=5, source=ColumnDataSource(data=data), color=Accent6[1],
                             legend_label="Close Price")
-        sp500_plot = p.line(x="Date", y="SP500", line_width=5, source=ColumnDataSource(data=data), color=Accent6[2],
+        p.line(x="Date", y="SP500", line_width=5, source=ColumnDataSource(data=data), color=Accent6[2],
                             legend_label="SP500")
 
         p.add_tools(HoverTool(

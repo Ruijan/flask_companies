@@ -27,21 +27,20 @@ def get_range(end_date, period, start_date):
 
 class LocalHistoryCache(dict):
     __instance = None
-    __collection = None
 
     @staticmethod
     def get_instance():
-        if LocalHistoryCache.__instance is None:
-            LocalHistoryCache()
-        return LocalHistoryCache.__instance
+        if LocalHistoryCache.__instance is not None:
+            return LocalHistoryCache.__instance
+        else:
+            return LocalHistoryCache()
 
-    def __init__(self, collection):
+    def __init__(self):
         super().__init__()
         if LocalHistoryCache.__instance is not None:
             raise Exception("This class is a singleton!")
         else:
             LocalHistoryCache.__instance = self
-            LocalHistoryCache.__collection = collection
 
     def get(self, key, start_date=None, end_date=None, period="max"):
         end_date, start_date = get_range(end_date, period, start_date)

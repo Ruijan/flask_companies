@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, date
+from datetime import datetime
 
 
 def str_amount_to_number(str_amount):

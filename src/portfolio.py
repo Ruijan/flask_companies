@@ -154,12 +154,9 @@ class Portfolio:
         self.stats["div_yield"] = self.stats["div_rate"] / self.total if not is_empty else 0
         self.stats["net_div_yield"] = self.stats["net_div_rate"] / self.total if not is_empty else 0
         self.stats["payout_ratio"] = self.stats["payout_ratio"] / self.total if not is_empty else 0
-        self.stats["cagr1"] = cagr(self.stats["cagr1"], self.stats["div_rate"],
-                                   1) if not is_empty else 0
-        self.stats["cagr3"] = cagr(self.stats["cagr3"], self.stats["div_rate"],
-                                   3) if not is_empty else 0
-        self.stats["cagr5"] = cagr(self.stats["cagr5"], self.stats["div_rate"],
-                                   5) if not is_empty else 0
+        self.stats["cagr1"] = cagr(self.stats["cagr1"], self.stats["div_rate"], 1) if not is_empty else 0
+        self.stats["cagr3"] = cagr(self.stats["cagr3"], self.stats["div_rate"], 3) if not is_empty else 0
+        self.stats["cagr5"] = cagr(self.stats["cagr5"], self.stats["div_rate"], 5) if not is_empty else 0
         self.stats["years_of_growth"] = self.stats["years_of_growth"] / self.total if not is_empty else 0
         if self.history.empty:
             self.history = hist
@@ -204,7 +201,7 @@ class Portfolio:
         self.positions[txn["ticker"]]["total_change"] += txn_hist["Close"][-1] - txn["total"]
         self.positions[txn["ticker"]]["ex_dividend_date"] = company["stats"]["ex-dividend_date"]
         div_freq = dict()
-        for key, value in company["dividend_history"].items():
+        for key, _ in company["dividend_history"].items():
             year = datetime.strptime(key, "%b %d, %Y").year
             if year not in div_freq:
                 div_freq[year] = 0
