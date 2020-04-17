@@ -25,7 +25,8 @@ tickers = None
 history_cache = LocalHistoryCache()
 currencies = Currencies()
 if 'MONGO_URI' in os.environ and not pymongo_connected:
-    app.config['MONGO_DBNAME'] = 'finance'
+    environment = os.environ['FLASK_DEBUG']
+    app.config['MONGO_DBNAME'] = 'staging_finance' if os.environ['FLASK_DEBUG'] else 'finance'
     app.config['MONGO_URI'] = os.environ['MONGO_URI'].strip("'").replace('test', app.config['MONGO_DBNAME'])
     app.config["GEOIPIFY_API_KEY"] = os.environ['WHOIS_KEY']
     mongo = PyMongo(app)
@@ -33,7 +34,6 @@ if 'MONGO_URI' in os.environ and not pymongo_connected:
     pymongo_connected = True
     companies_cache = CompaniesCache(mongo.db.cleaned_companies)
     tickers = pd.DataFrame.from_records(mongo.db.tickers.find())
-
 
 
 def is_user_connected():
@@ -66,6 +66,20 @@ def explore_companies():
                                dividends=html)
     else:
         return redirect(url_for("login"))
+
+
+@app.route('/refresh_staging')
+def refresh_staging_prod():
+    collections = mongo.db.client.finance.list_collection_names()
+    for collection in collections:
+        print("Collection: " + collection)
+        documents = list(mongo.db.client.finance[collection].find())
+        mongo.db.client.staging_finance[collection].drop()
+        for index in range(0, len(documents), 100):
+            if index + 100 < len(documents):
+                mongo.db.client.staging_finance[collection].insert_many(documents[index:index+100])
+            else:
+                mongo.db.client.staging_finance[collection].insert_many(documents[index:len(documents)])
 
 
 @app.route('/screener/<ticker>')
