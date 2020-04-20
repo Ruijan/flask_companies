@@ -250,4 +250,4 @@ def register():
 
 if __name__ == '__main__':
     app.config['SESSION_TYPE'] = 'filesystem'
-    app.run()
+    app.run(debug=False)
