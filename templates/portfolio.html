@@ -14,11 +14,13 @@
     <!-- TO BE REMOVED/> -->
     <script>
         var tickers = {{ tickers | tojson }};
-        var hierarchical_growth_data = {{ hierarchical_growth_data | safe }};
+        var hierarchical_investment_data = {{ hierarchical_investment_data | safe }};
+        var companies_investment_data = {{ companies_investment_data | safe }};
         var hierarchical_dividend_data = {{ hierarchical_dividend_data | safe }};
+        var companies_dividend_data = {{ companies_dividend_data | safe }};
+
     </script>
     <script type="text/javascript" src="../static/js/main.js"></script>
-    <script type="text/javascript" src="../static/js/bar_chart.js"></script>
     <link rel="stylesheet" type="text/css" href="../static/styles/main.css">
 </head>
 
@@ -76,9 +78,9 @@
                         </tbody>
                     </table>
                     <div class='layout'>
-                        <!-- <h2>Bar chart example</h2> -->
-                        <div id='container_growth'>
-                        </div>
+                        <h2>Investment Diversification</h2>
+                        <div id='container_investment'></div>
+                        <div id='container_investment_companies'></div>
                     </div>
 
                     <div class="layout">
@@ -276,10 +278,11 @@
                             </td>
                         </tr>
                     </table>
+                    <h1>Dividend diversification</h1>
+
                     <div class='layout'>
-                        <!-- <h2>Bar chart example</h2> -->
-                        <div id="container_dividend">
-                        </div>
+                        <div id="container_dividend"></div>
+                        <div id="container_dividend_companies"></div>
                     </div>
                     <div id="world_map">
                         {{ world_map_script_dividends | safe}}
@@ -341,8 +344,10 @@
 
 <script>
     document.getElementById('date_picker').value = new Date().toDateInputValue();
-    new HierarchicalBarChart("div#container_growth", hierarchical_growth_data).svg.node();
+    new HierarchicalBarChart("div#container_investment", hierarchical_investment_data).svg.node();
+    new VerticalBarChart("div#container_investment_companies", companies_investment_data);
     new HierarchicalBarChart("div#container_dividend", hierarchical_dividend_data).svg.node();
+    new VerticalBarChart("div#container_dividend_companies", companies_dividend_data);
     openTab('summary_button', "Summary");
 </script>
 

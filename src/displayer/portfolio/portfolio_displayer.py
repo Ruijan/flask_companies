@@ -154,27 +154,27 @@ def group_value_by_country(summary, value):
 
 
 def get_growth_plot(summary, hist, is_empty):
-    company_pie_plot, company_pie_script = get_bar_plot(summary, "name", "total")
+    data = group_by("name", summary, "total").sort_values(by="value", ascending=False)
+    companies_investment_data = json.dumps(data.to_dict("records"), indent=2)
     close, script = get_portfolio_history_plot(hist) if not is_empty else ("", "")
     data = create_company_tree(["sector", "industry", "name"], summary, "total")
     hierarchical_data = json.dumps(data, indent=2)
     return {"script": script if not is_empty else "",
             "close": close if not is_empty else "",
-            "company_pie_plot": company_pie_plot if not is_empty else "",
-            "company_pie_script": company_pie_script if not is_empty else "",
-            "hierarchical_growth_data": hierarchical_data
+            "hierarchical_investment_data": hierarchical_data,
+            "companies_investment_data": companies_investment_data
             }
 
 
 def get_dividends_plots(summary, hist, is_empty):
     dividends_plot, div_script = get_portfolio_dividends_plot(hist) if not is_empty else ("", "")
-    company_pie_div_plot, company_pie_div_script = get_bar_plot(summary, "name", "dividends")
+    data = group_by("name", summary, "dividends").sort_values(by="value", ascending=False)
+    companies_dividends_data = json.dumps(data.to_dict("records"), indent=2)
     data = create_company_tree(["sector", "industry", "name"], summary, "dividends")
     hierarchical_data = json.dumps(data, indent=2)
     return {"div_script": div_script if not is_empty else "",
             "dividends_plot": dividends_plot if not is_empty else "",
-            "company_pie_div_plot": company_pie_div_plot if not is_empty else "",
-            "company_pie_div_script": company_pie_div_script if not is_empty else "",
+            "companies_dividend_data": companies_dividends_data,
             "hierarchical_dividend_data": hierarchical_data}
 
 
