@@ -12,12 +12,11 @@ from babel.numbers import format_currency
 from bokeh.embed import components
 from bokeh.models import ColumnDataSource
 from bokeh.models import HoverTool
-from bokeh.palettes import Accent6
+from bokeh.palettes import Accent6, Inferno256
 from bokeh.plotting import figure
 from bokeh.transform import cumsum
 from flask import render_template
 from bokeh.models import GeoJSONDataSource
-
 import matplotlib.cm
 from bokeh.models import ColorBar, LogColorMapper, LogTicker, LinearColorMapper, BasicTicker
 
@@ -155,34 +154,28 @@ def group_value_by_country(summary, value):
 
 
 def get_growth_plot(summary, hist, is_empty):
-    sector_pie_plot, sector_pie_script = get_pie_plot(summary, "sector", "total")
-    industry_pie_plot, industry_pie_script = get_pie_plot(summary, "industry", "total")
-    company_pie_plot, company_pie_script = get_pie_plot(summary, "name", "total")
+    company_pie_plot, company_pie_script = get_bar_plot(summary, "name", "total")
     close, script = get_portfolio_history_plot(hist) if not is_empty else ("", "")
+    data = create_company_tree(["sector", "industry", "name"], summary, "total")
+    hierarchical_data = json.dumps(data, indent=2)
     return {"script": script if not is_empty else "",
             "close": close if not is_empty else "",
-            "sector_pie_plot": sector_pie_plot if not is_empty else "",
-            "sector_pie_script": sector_pie_script if not is_empty else "",
-            "industry_pie_plot": industry_pie_plot if not is_empty else "",
-            "industry_pie_script": industry_pie_script if not is_empty else "",
             "company_pie_plot": company_pie_plot if not is_empty else "",
-            "company_pie_script": company_pie_script if not is_empty else ""
+            "company_pie_script": company_pie_script if not is_empty else "",
+            "hierarchical_growth_data": hierarchical_data
             }
 
 
 def get_dividends_plots(summary, hist, is_empty):
     dividends_plot, div_script = get_portfolio_dividends_plot(hist) if not is_empty else ("", "")
-    sector_pie_div_plot, sector_pie_div_script = get_pie_plot(summary, "sector", "dividends")
-    industry_pie_div_plot, industry_pie_div_script = get_pie_plot(summary, "industry", "dividends")
-    company_pie_div_plot, company_pie_div_script = get_pie_plot(summary, "name", "dividends")
+    company_pie_div_plot, company_pie_div_script = get_bar_plot(summary, "name", "dividends")
+    data = create_company_tree(["sector", "industry", "name"], summary, "dividends")
+    hierarchical_data = json.dumps(data, indent=2)
     return {"div_script": div_script if not is_empty else "",
             "dividends_plot": dividends_plot if not is_empty else "",
-            "sector_pie_div_plot": sector_pie_div_plot if not is_empty else "",
-            "sector_pie_div_script": sector_pie_div_script if not is_empty else "",
-            "industry_pie_div_plot": industry_pie_div_plot if not is_empty else "",
-            "industry_pie_div_script": industry_pie_div_script if not is_empty else "",
             "company_pie_div_plot": company_pie_div_plot if not is_empty else "",
-            "company_pie_div_script": company_pie_div_script if not is_empty else ""}
+            "company_pie_div_script": company_pie_div_script if not is_empty else "",
+            "hierarchical_dividend_data": hierarchical_data}
 
 
 def get_dividends_info(history, stats, currency, is_empty):
@@ -272,6 +265,56 @@ def get_pie_plot(summary, field, value):
     p.legend.location = "center_right"
     script, dividends = components(p)
     return dividends, script
+
+
+def get_bar_plot(summary, field, value):
+    data = group_by(field, summary, value)
+    colors = [Inferno256[x] for x in range(0, 256, round(256/len(data.index)))]
+    data["color"] = colors[0:len(data.index)]
+
+    p = figure(x_range=data[field], sizing_mode='scale_width', toolbar_location=None, aspect_ratio=1920.0 / 1280)
+    p.add_tools(HoverTool(
+        tooltips=[(field.capitalize(), "@" + field), ("Amount", " @value{%0.2f} (@ratio{:0.2%})")],
+        formatters={'@value': 'printf'}
+    ))
+    p.vbar(x=field, top='value', width=0.9, source=data)
+    p.xaxis.major_label_orientation = math.pi / 4
+    #prettify_plot(p)
+    script, dividends = components(p)
+    return dividends, script
+
+
+def group_by(field, summary, value):
+    sectors = {}
+    total = 0
+    for ticker, company in summary.items():
+        if company[field] not in sectors:
+            sectors[company[field]] = 0
+        sectors[company[field]] += company[value]
+        total += company[value]
+    data = pd.Series(sectors).sort_values().reset_index(name='value').rename(columns={'index': field})
+    data["ratio"] = data['value'] / total
+    return data
+
+
+def create_company_tree(fields, summary, value):
+    tree = {"name": "portfolio", "children": [], "value": 0}
+    total = 0
+    for ticker, company in summary.items():
+        c_node = tree
+        for field in fields:
+            child_index = None
+            for index in range(len(c_node["children"])):
+                if c_node["children"][index]["name"] == company[field]:
+                    child_index = index
+            if child_index is None:
+                c_node["children"].append({"name": company[field], "children": [], "value": 0})
+                child_index = len(c_node["children"])-1
+            c_node["children"][child_index]["value"] += company[value]
+            c_node = c_node["children"][child_index]
+        total += company[value]
+    tree["value"] = total
+    return tree
 
 
 def get_portfolio_summary_table(summary, currency):

@@ -7,12 +7,18 @@
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-2.0.0.min.js"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.0.0.min.js"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.0.0.min.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/bar_chart.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/hierarchical_bar_chart.js') }}"></script>
     <!-- TO BE REMOVED/> -->
     <script>
-        var tickers = {{tickers | tojson}};
+        var tickers = {{ tickers | tojson }};
+        var hierarchical_growth_data = {{ hierarchical_growth_data | safe }};
+        var hierarchical_dividend_data = {{ hierarchical_dividend_data | safe }};
     </script>
     <script type="text/javascript" src="../static/js/main.js"></script>
+    <script type="text/javascript" src="../static/js/bar_chart.js"></script>
     <link rel="stylesheet" type="text/css" href="../static/styles/main.css">
 </head>
 
@@ -33,10 +39,10 @@
 
             <div id="dividends">
                 <div class="tab">
-                    <button class="tablinks active" onclick="openTab(event, 'Summary')">Summary</button>
-                    <button class="tablinks" onclick="openTab(event, 'Growth')">Growth</button>
-                    <button class="tablinks" onclick="openTab(event, 'Dividends')">Dividends</button>
-                    <button class="tablinks" onclick="openTab(event, 'Transactions')">Transactions</button>
+                    <button class="tablinks active" onclick="openTab('summary_button', 'Summary')" id="summary_button">Summary</button>
+                    <button class="tablinks" onclick="openTab('growth_button', 'Growth')" id="growth_button">Growth</button>
+                    <button class="tablinks" onclick="openTab('dividends_button', 'Dividends')" id="dividends_button">Dividends</button>
+                    <button class="tablinks" onclick="openTab('transactions_button', 'Transactions')" id="transactions_button">Transactions</button>
                 </div>
                 <!-- Tab content -->
                 <div id="Summary" class="tabcontent" style="display: block;">
@@ -69,11 +75,16 @@
                             {% endif %}
                         </tbody>
                     </table>
+                    <div class='layout'>
+                        <!-- <h2>Bar chart example</h2> -->
+                        <div id='container_growth'>
+                        </div>
+                    </div>
+
                     <div class="layout">
-                        <div class="pie_plot"> {{ sector_pie_script | safe }} {{ sector_pie_plot | safe }} </div>
-                        <div class="pie_plot"> {{ industry_pie_script | safe }} {{ industry_pie_plot | safe }}</div>
                         <div class="pie_plot">{{ company_pie_script | safe }} {{ company_pie_plot | safe }}</div>
                     </div>
+
                     <div class="chart" id="bargraph"></div>
                     <div id="world_map">
                         {{ world_map_script_total | safe}}
@@ -81,7 +92,7 @@
                     </div>
                 </div>
                 
-                <div id="Growth" class="tabcontent">
+                <div id="Growth" class="tabcontent" style="display: block;">
                     <table class="div_info">
                         <tr>
                             <th>
@@ -129,7 +140,7 @@
                     
                 </div>
 
-                <div id="Dividends" class="tabcontent">
+                <div id="Dividends" class="tabcontent" style="display: block;">
                     <p class="div_score">{{ div_score | safe}}</p>
                     <div id="upcoming_dividends">
                         <h1>Upcoming Dividends</h1>
@@ -209,7 +220,7 @@
                             </td>
                         </tr>
                     </table>
-                    
+
                     <div id="graphDiv">
                         {{ div_script | safe }}
                         {{ dividends_plot | safe }}
@@ -265,17 +276,17 @@
                             </td>
                         </tr>
                     </table>
-                    <div class="layout">
-                        <div class="pie_plot"> {{ sector_pie_div_script | safe }} {{ sector_pie_div_plot | safe }} </div>
-                        <div class="pie_plot"> {{ industry_pie_div_script | safe }} {{ industry_pie_div_plot | safe }}</div>
-                        <div class="pie_plot">{{ company_pie_div_script | safe }} {{ company_pie_div_plot | safe }}</div>
+                    <div class='layout'>
+                        <!-- <h2>Bar chart example</h2> -->
+                        <div id="container_dividend">
+                        </div>
                     </div>
                     <div id="world_map">
                         {{ world_map_script_dividends | safe}}
                         {{ world_map_plot_dividends | safe}}
                     </div>
                 </div>
-                <div id="Transactions" class="tabcontent">
+                <div id="Transactions" class="tabcontent" style="display: block;">
                     <div id="error_add_transaction"></div>
                     <table class="dataframe" id="transaction_table">
                         <tr>
@@ -330,5 +341,8 @@
 
 <script>
     document.getElementById('date_picker').value = new Date().toDateInputValue();
+    new HierarchicalBarChart("div#container_growth", hierarchical_growth_data).svg.node();
+    new HierarchicalBarChart("div#container_dividend", hierarchical_dividend_data).svg.node();
+    openTab('summary_button', "Summary");
 </script>
 
