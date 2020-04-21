@@ -7,7 +7,7 @@ class StackableBarChart extends BarChart {
             .range([this.margin.left, this.width - this.margin.right])
             .padding(0.1)
         this.y = d3.scaleLinear()
-            .domain([0, d3.max(this.root, d => d3.max(d, d => d[1]))])
+            .domain([0, d3.max(this.root, d => d3.max(d, d => d[1])) * 1.2])
             .rangeRound([this.height - this.margin.bottom, this.margin.top])
         this.color = d3.scaleOrdinal()
             .domain(this.root.map(d => d.key))

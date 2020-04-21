@@ -27,7 +27,7 @@ class Portfolio:
             portfolio["history"] = DataFrame.from_dict(portfolio["history"])
             if portfolio["history"].index.name != "Date":
                 portfolio["history"].set_index("Date", inplace=True)
-        return Portfolio(portfolio["name"], portfolio["email"], portfolio["stats"], portfolio["history"],
+        return Portfolio(portfolio["name"], portfolio["email"], portfolio["stats"], portfolio["history"] if "history" in portfolio else None,
                          portfolio["last_update"], portfolio["summary"], portfolio["currency"], portfolio["_id"],
                          portfolio["total"], portfolio["current"], portfolio["transactions"])
 
@@ -76,7 +76,6 @@ class Portfolio:
             position["current_price"] = cache.get_last_day(ticker)["Close"]
         if self.transactions:
             hist["S&P500"] = ref_hist["Close"]
-            hist["DividendCumSum"] = hist["Dividends"].cumsum()
         self.compute_stats(hist)
 
     def add_transaction(self, data, cache, companies_cache):
@@ -162,8 +161,9 @@ class Portfolio:
         if self.history.empty:
             self.history = hist
         else:
-            temp_merge = hist.combine_first(self.history)
+            temp_merge = hist.combine_first(self.history).fillna(method='ffill')
             self.history = temp_merge
+            self.history["DividendCumSum"] = self.history["Dividends"].cumsum().fillna(method='ffill')
         self.current = self.total + diff_price[-1] if not is_empty else 0
 
     def add_txn_to_stats(self, c_div, company, txn):
