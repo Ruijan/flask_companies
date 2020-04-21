@@ -76,6 +76,7 @@ class Portfolio:
             position["current_price"] = cache.get_last_day(ticker)["Close"]
         if self.transactions:
             hist["S&P500"] = ref_hist["Close"]
+            hist["DividendCumSum"] = hist["Dividends"].cumsum()
         self.compute_stats(hist)
 
     def add_transaction(self, data, cache, companies_cache):

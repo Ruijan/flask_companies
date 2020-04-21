@@ -22,7 +22,6 @@ from bokeh.models import ColorBar, LogColorMapper, LogTicker, LinearColorMapper,
 
 
 def render_portfolio(portfolio, tickers, tab):
-
     is_empty = not portfolio.transactions
 
     all_tickers = tickers[["Ticker", "Name"]].set_index("Ticker").to_dict()["Name"]
@@ -168,14 +167,9 @@ def get_growth_plot(summary, hist, is_empty):
 
 def get_dividends_plots(summary, hist, is_empty):
     # dividends_plot, div_script = get_portfolio_dividends_plot(hist) if not is_empty else ("", "")
-    hist["DividendCumSum"] = hist["Dividends"].cumsum()
-    amount = hist["Dividends"].resample("M").sum()
-    net_amount = hist["Net_Dividends"].resample("M").sum()
-
-    dates = amount.index
-    dividend_history = {'Date': dates.to_pydatetime().tolist(),
-            'Amount': amount.values.flatten().tolist(),
-            'Net_Amount': net_amount.values.flatten().tolist()}
+    dividend_history = create_dividend_history(hist)
+    for index in range(len(dividend_history)):
+        dividend_history[index]["date"] = dividend_history[index]["date"].strftime("%B %Y")
     data = group_by("name", summary, "dividends").sort_values(by="value", ascending=False)
     companies_dividends_data = json.dumps(data.to_dict("records"), indent=2)
     data = create_company_tree(["sector", "industry", "name"], summary, "dividends")
@@ -185,6 +179,34 @@ def get_dividends_plots(summary, hist, is_empty):
     return {"companies_dividend_data": companies_dividends_data,
             "hierarchical_dividend_data": hierarchical_data,
             "dividend_history": dividend_history}
+
+
+def create_dividend_history(hist):
+    today = datetime.today()
+    min_date = datetime(today.year, 1, 1)
+    max_date = datetime(today.year, 12, 1)
+    if not hist.empty:
+        min_date = min(hist.index)
+        max_date = datetime(today.year, today.month + 6, 1)
+    history = [({"tax": 0, "date": c_date, "net_amount": 0}) for c_date in get_list_of_dates_per_month(min_date, max_date)]
+    for index, row in hist.iterrows():
+        c_index = -1
+        for i in range(len(history)):
+            if index.year == history[i]["date"].year and index.month == history[i]["date"].month:
+                c_index = i
+        if c_index >= 0:
+            history[c_index]["net_amount"] += row["Net_Dividends"]
+            history[c_index]["tax"] += row["Dividends"] - row["Net_Dividends"]
+    return history
+
+
+def get_list_of_dates_per_month(start_date, end_date):
+    total_months = lambda dt: dt.month + 12 * dt.year
+    dates = []
+    for tot_m in range(total_months(start_date) - 1, total_months(end_date)):
+        y, m = divmod(tot_m, 12)
+        dates.append(datetime(y, m + 1, 1))
+    return dates
 
 
 def get_dividends_info(history, stats, currency, is_empty):
@@ -278,7 +300,7 @@ def get_pie_plot(summary, field, value):
 
 def get_bar_plot(summary, field, value):
     data = group_by(field, summary, value)
-    colors = [Inferno256[x] for x in range(0, 256, round(256/len(data.index)))]
+    colors = [Inferno256[x] for x in range(0, 256, round(256 / len(data.index)))]
     data["color"] = colors[0:len(data.index)]
 
     p = figure(x_range=data[field], sizing_mode='scale_width', toolbar_location=None, aspect_ratio=1920.0 / 1280)
@@ -288,7 +310,7 @@ def get_bar_plot(summary, field, value):
     ))
     p.vbar(x=field, top='value', width=0.9, source=data)
     p.xaxis.major_label_orientation = math.pi / 4
-    #prettify_plot(p)
+    # prettify_plot(p)
     script, dividends = components(p)
     return dividends, script
 
@@ -318,7 +340,7 @@ def create_company_tree(fields, summary, value):
                     child_index = index
             if child_index is None:
                 c_node["children"].append({"name": company[field], "children": [], "value": 0})
-                child_index = len(c_node["children"])-1
+                child_index = len(c_node["children"]) - 1
             c_node["children"][child_index]["value"] += company[value]
             c_node = c_node["children"][child_index]
         total += company[value]
@@ -465,11 +487,11 @@ def get_portfolio_history_plot(hist):
                    aspect_ratio=1920.0 / 1080.0)
         p.toolbar.active_drag = None
         p.line(x="Date", y="Amount", line_width=5, source=ColumnDataSource(data=data), color=Accent6[0],
-                             legend_label="Invested")
+               legend_label="Invested")
         close_plot = p.line(x="Date", y="Close", line_width=5, source=ColumnDataSource(data=data), color=Accent6[1],
                             legend_label="Close Price")
         p.line(x="Date", y="SP500", line_width=5, source=ColumnDataSource(data=data), color=Accent6[2],
-                            legend_label="SP500")
+               legend_label="SP500")
 
         p.add_tools(HoverTool(
             tooltips=[("Date", "@Date{%F}"), ("Close", " @Close{%0.2f}"), ("S&P 500", " @SP500{%0.2f}"),

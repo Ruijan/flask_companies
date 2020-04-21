@@ -1,8 +1,8 @@
 class BarChart{
-    constructor(container_name, data) {
+    constructor(container_name, data, margin) {
         this.root = this.transformData(data)
         this.c_name = container_name
-        this.margin = ({top: 30, right: 30, bottom: 0, left: 200})
+        this.margin = margin
         this.barStep = 27
         this.barPadding = 3 / this.barStep
         this.container = d3.select(container_name)
