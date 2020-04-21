@@ -11,7 +11,7 @@ class StackableBarChart extends BarChart {
             .rangeRound([this.height - this.margin.bottom, this.margin.top])
         this.color = d3.scaleOrdinal()
             .domain(this.root.map(d => d.key))
-            .range(["#fc8d59", "#99d594"])
+            .range(["steelblue", "#fc8d59"])
             .unknown("#ccc")
         this.tooltip = d3.select(this.c_name)
             .append("div")
@@ -45,6 +45,7 @@ class StackableBarChart extends BarChart {
     transformData(data) {
         data.columns = Object.keys(data[0])
         array_move(data.columns, 1, 0)
+        array_move(data.columns, 1, 2)
         data.forEach((d, i) => (d, d.total = d3.sum(Object.keys(d), c => d[c]), d))
         return d3.stack()
             .keys(data.columns.slice(1))
