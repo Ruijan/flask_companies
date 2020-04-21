@@ -15,9 +15,11 @@ from src.cache.local_history_cache import LocalHistoryCache
 from src.cache.currencies import Currencies
 from src.displayer.portfolio.portfolio_displayer import format_amount
 from flask_simple_geoip import SimpleGeoIP
+from werkzeug.middleware.profiler import ProfilerMiddleware
 
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]
+# app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 pymongo_connected = False
 companies_cache = None
 mongo = None

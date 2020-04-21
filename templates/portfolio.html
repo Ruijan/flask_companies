@@ -9,8 +9,10 @@
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.0.0.min.js"></script>
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
-    <script type="text/javascript" src="{{ url_for('static',filename='js/bar_chart.js') }}"></script>
-    <script type="text/javascript" src="{{ url_for('static',filename='js/hierarchical_bar_chart.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/bar_chart.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/stackable_bar_chart.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/vertical_bar_chart.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/hierarchical_bar_chart.js') }}"></script>
     <!-- TO BE REMOVED/> -->
     <script>
         var tickers = {{ tickers | tojson }};
@@ -18,6 +20,7 @@
         var companies_investment_data = {{ companies_investment_data | safe }};
         var hierarchical_dividend_data = {{ hierarchical_dividend_data | safe }};
         var companies_dividend_data = {{ companies_dividend_data | safe }};
+        //var dividend_history = {{ dividend_history | safe }};
 
     </script>
     <script type="text/javascript" src="../static/js/main.js"></script>
@@ -222,7 +225,9 @@
                             </td>
                         </tr>
                     </table>
-
+                    <div class='layout'>
+                        <div id="container_dividend_history"></div>
+                    </div>
                     <div id="graphDiv">
                         {{ div_script | safe }}
                         {{ dividends_plot | safe }}
@@ -281,6 +286,7 @@
                     <h1>Dividend diversification</h1>
 
                     <div class='layout'>
+                        <h2>Click on bars to expand. Click on background to go back.</h2>
                         <div id="container_dividend"></div>
                         <div id="container_dividend_companies"></div>
                     </div>
@@ -348,6 +354,7 @@
     new VerticalBarChart("div#container_investment_companies", companies_investment_data);
     new HierarchicalBarChart("div#container_dividend", hierarchical_dividend_data).svg.node();
     new VerticalBarChart("div#container_dividend_companies", companies_dividend_data);
+    //new VerticalBarChart("div#container_dividend_history", dividend_history);
     openTab('summary_button', "Summary");
 </script>
 

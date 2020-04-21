@@ -167,15 +167,24 @@ def get_growth_plot(summary, hist, is_empty):
 
 
 def get_dividends_plots(summary, hist, is_empty):
-    dividends_plot, div_script = get_portfolio_dividends_plot(hist) if not is_empty else ("", "")
+    # dividends_plot, div_script = get_portfolio_dividends_plot(hist) if not is_empty else ("", "")
+    hist["DividendCumSum"] = hist["Dividends"].cumsum()
+    amount = hist["Dividends"].resample("M").sum()
+    net_amount = hist["Net_Dividends"].resample("M").sum()
+
+    dates = amount.index
+    dividend_history = {'Date': dates.to_pydatetime().tolist(),
+            'Amount': amount.values.flatten().tolist(),
+            'Net_Amount': net_amount.values.flatten().tolist()}
     data = group_by("name", summary, "dividends").sort_values(by="value", ascending=False)
     companies_dividends_data = json.dumps(data.to_dict("records"), indent=2)
     data = create_company_tree(["sector", "industry", "name"], summary, "dividends")
     hierarchical_data = json.dumps(data, indent=2)
-    return {"div_script": div_script if not is_empty else "",
-            "dividends_plot": dividends_plot if not is_empty else "",
-            "companies_dividend_data": companies_dividends_data,
-            "hierarchical_dividend_data": hierarchical_data}
+    # "div_script": div_script if not is_empty else "",
+    # "dividends_plot": dividends_plot if not is_empty else "",
+    return {"companies_dividend_data": companies_dividends_data,
+            "hierarchical_dividend_data": hierarchical_data,
+            "dividend_history": dividend_history}
 
 
 def get_dividends_info(history, stats, currency, is_empty):

@@ -1,16 +1,8 @@
 
-class VerticalBarChart {
+class VerticalBarChart extends BarChart{
     constructor(container_name, data) {
-        this.root = data
-        this.margin = ({top: 30, right: 30, bottom: 0, left: 200})
-        this.barStep = 27
-        this.barPadding = 3 / this.barStep
-        this.duration = 500
-        this.c_name = container_name
-        this.container = d3.select(container_name)
-        this.width = this.container.node().getBoundingClientRect().width - this.margin.right;
-        this.height = this.getHeight()
-        this.container.style("height", (this.height + this.margin.bottom + this.margin.top) + "px");
+        super(container_name, data);
+        this.init()
         this.tooltip = d3.select(this.c_name)
             .append("div")
             .style("opacity", 0)
@@ -23,13 +15,18 @@ class VerticalBarChart {
             .style("color", "black")
         this.color = d3.scaleOrdinal([true, false], ["steelblue", "#aaa"])
         this.x = d3.scaleLinear().range([this.margin.left, this.width - this.margin.right])
-        const maxValue = Math.max.apply(Math, this.root.map(function(o) { return o.value; }))
-
-        this.x.domain([0, maxValue]);
+        this.x.domain([0, this.computeMaxXDomain()]);
         this.buildSVG();
-        this.createBar();
-
     }
+
+    init(){}
+
+    computeMaxXDomain() {
+        return Math.max.apply(Math, this.root.map(function (o) {
+            return o.value;
+        }));
+    }
+
     buildSVG(){
         this.svg = this.container.append("svg")
             .attr("preserveAspectRatio", "xMinYMin meet")
@@ -57,6 +54,7 @@ class VerticalBarChart {
 
         this.svg.append("g")
             .call(this.yAxis);
+        this.createBar();
     }
 
     // Creates a set of bars for the given data node, at the specified index.
