@@ -1,13 +1,13 @@
-import json
 import math
 from datetime import datetime
 from math import pi
-
+import json
 from bokeh.colors import RGB
 from colour import Color
 import numpy as np
 import pandas as pd
 import pycountry
+import os
 from babel.numbers import format_currency
 from bokeh.embed import components
 from bokeh.models import ColumnDataSource
@@ -58,9 +58,18 @@ def get_upcoming_dividends(summary, currency):
 
 def get_world_maps(summary):
     context = {}
-    context.update(get_world_map_plot(summary, "total"))
-    context.update(get_world_map_plot(summary, "dividends"))
-    context.update(get_world_map_plot(summary, "total_change"))
+    dirpath = os.getcwd()
+    print("current directory is : " + dirpath)
+    foldername = os.path.basename(dirpath)
+    print("Directory name is : " + foldername)
+    with open(dirpath + '/resources/world_map.json') as json_file:
+        countries = json.load(json_file)
+        value_per_country = group_value_by_country(summary, "total")
+        value_per_country = [{"country": key, "value": value_per_country[key]} for key in value_per_country]
+        context.update({"countries": countries, "invested_per_country": value_per_country})
+    # context.update(get_world_map_plot(summary, "total"))
+    # context.update(get_world_map_plot(summary, "dividends"))
+    # context.update(get_world_map_plot(summary, "total_change"))
     return context
 
 

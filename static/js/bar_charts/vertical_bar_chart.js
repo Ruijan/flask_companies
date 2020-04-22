@@ -75,7 +75,7 @@ class VerticalBarChart extends BarChart{
             .attr("x", chart.margin.left - 6)
             .attr("y", (d,i) => chart.barStep * (1 - chart.barPadding) / 2 + chart.barStep * i)
             .attr("dy", ".35em")
-            .text(d => d.name).style('fill', 'cornsilk');
+            .text(d => this.limitString(d.name, 25)).style('fill', 'cornsilk');
 
         // Three function that change the tooltip when user hover / move / leave a cell
         let mouseover = function(d) {
@@ -111,7 +111,7 @@ class VerticalBarChart extends BarChart{
                     .attr('x1', pos_x)
                     .attr('y1', 0)
                     .attr('x2', pos_x)
-                    .attr('y2', chart.height)
+                    .attr('y2', chart.height - chart.margin.top - chart.margin.bottom)
                     .attr('stroke', 'red')
                 bar.append('text')
                     .attr('class', 'divergence')

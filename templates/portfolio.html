@@ -13,6 +13,7 @@
     <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/stackable_bar_chart.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/vertical_bar_chart.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/hierarchical_bar_chart.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/map_charts/world_map.js') }}"></script>
     <!-- TO BE REMOVED/> -->
     <script>
         var tickers = {{ tickers | tojson }};
@@ -21,6 +22,8 @@
         var hierarchical_dividend_data = {{ hierarchical_dividend_data | safe }};
         var companies_dividend_data = {{ companies_dividend_data | safe }};
         var dividend_history = {{ dividend_history | safe }};
+        var countries = {{ countries | tojson }};
+        var invested_per_country = {{ invested_per_country | safe }};
 
     </script>
     <script type="text/javascript" src="../static/js/main.js"></script>
@@ -85,6 +88,7 @@
                         <h3>Click on a bar to expand. Click on the background to go back.</h3>
                         <div id='container_investment'></div>
                         <div id='container_investment_companies'></div>
+                        <div id='container_investment_countries'></div>
                     </div>
 
                     <div class="layout">
@@ -92,10 +96,10 @@
                     </div>
 
                     <div class="chart" id="bargraph"></div>
-                    <div id="world_map">
-                        {{ world_map_script_total | safe}}
-                        {{ world_map_plot_total | safe}}
-                    </div>
+<!--                    <div id="world_map">-->
+<!--                        {{ world_map_script_total | safe}}-->
+<!--                        {{ world_map_plot_total | safe}}-->
+<!--                    </div>-->
                 </div>
                 
                 <div id="Growth" class="tabcontent" style="display: block;">
@@ -139,10 +143,10 @@
                         {{ script | safe}}
                         {{ close | safe}}
                     </div>
-                    <div id="world_map">
-                        {{ world_map_script_total_change | safe}}
-                        {{ world_map_plot_total_change | safe}}
-                    </div>
+<!--                    <div id="world_map">-->
+<!--                        {{ world_map_script_total_change | safe}}-->
+<!--                        {{ world_map_plot_total_change | safe}}-->
+<!--                    </div>-->
                     
                 </div>
 
@@ -291,10 +295,10 @@
                         <div id="container_dividend"></div>
                         <div id="container_dividend_companies"></div>
                     </div>
-                    <div id="world_map">
-                        {{ world_map_script_dividends | safe}}
-                        {{ world_map_plot_dividends | safe}}
-                    </div>
+<!--                    <div id="world_map">-->
+<!--                        {{ world_map_script_dividends | safe}}-->
+<!--                        {{ world_map_plot_dividends | safe}}-->
+<!--                    </div>-->
                 </div>
                 <div id="Transactions" class="tabcontent" style="display: block;">
                     <div id="error_add_transaction"></div>
@@ -356,6 +360,7 @@
     new HierarchicalBarChart("div#container_dividend", hierarchical_dividend_data).svg.node();
     new VerticalBarChart("div#container_dividend_companies", companies_dividend_data);
     new StackableBarChart("div#container_dividend_history", dividend_history);
+    new WorldMap("div#container_investment_countries", countries, invested_per_country)
     openTab('summary_button', "Summary");
 </script>
 

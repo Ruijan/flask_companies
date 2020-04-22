@@ -15,6 +15,14 @@ class BarChart{
         return 0;
     }
 
+    limitString(string, nbChar){
+        if(string.length > nbChar){
+            string = string.slice(0,nbChar - 3)
+            string += "..."
+        }
+        return string;
+    }
+
     transformData(data){
         return data
     }
