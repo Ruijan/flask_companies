@@ -24,6 +24,8 @@
         var dividend_history = {{ dividend_history | safe }};
         var countries = {{ countries | tojson }};
         var invested_per_country = {{ invested_per_country | safe }};
+        var dividend_per_country = {{ dividend_per_country | safe }};
+
 
     </script>
     <script type="text/javascript" src="../static/js/main.js"></script>
@@ -294,6 +296,7 @@
                         <h3>Click on bars to expand. Click on background to go back.</h3>
                         <div id="container_dividend"></div>
                         <div id="container_dividend_companies"></div>
+                        <div id="container_dividend_countries"></div>
                     </div>
 <!--                    <div id="world_map">-->
 <!--                        {{ world_map_script_dividends | safe}}-->
@@ -361,6 +364,7 @@
     new VerticalBarChart("div#container_dividend_companies", companies_dividend_data);
     new StackableBarChart("div#container_dividend_history", dividend_history);
     new WorldMap("div#container_investment_countries", countries, invested_per_country)
+    new WorldMap("div#container_dividend_countries", countries, dividend_per_country)
     openTab('summary_button', "Summary");
 </script>
 

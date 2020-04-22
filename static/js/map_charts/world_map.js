@@ -63,9 +63,7 @@ class WorldMap extends BarChart{
             )
             // set the color of each country
             .attr("fill", function (d) {
-                let has = map.has(d.id);
-                let value = map.get(d.id);
-                d.total = map.get(d.id) || 0;
+                d.total = map.get(d.id);
                 return colorScale(d.total);
             })
             .on('mouseenter', function (actual, i) {

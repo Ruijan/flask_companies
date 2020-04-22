@@ -65,8 +65,11 @@ def get_world_maps(summary):
     with open(dirpath + '/resources/world_map.json') as json_file:
         countries = json.load(json_file)
         value_per_country = group_value_by_country(summary, "total")
+        dividend_per_country = group_value_by_country(summary, "dividends")
         value_per_country = [{"country": key, "value": value_per_country[key]} for key in value_per_country]
-        context.update({"countries": countries, "invested_per_country": value_per_country})
+        dividend_per_country = [{"country": key, "value": dividend_per_country[key]} for key in dividend_per_country]
+        context.update({"countries": countries, "invested_per_country": value_per_country,
+                        "dividend_per_country": dividend_per_country})
     # context.update(get_world_map_plot(summary, "total"))
     # context.update(get_world_map_plot(summary, "dividends"))
     # context.update(get_world_map_plot(summary, "total_change"))
@@ -175,7 +178,6 @@ def get_growth_plot(summary, hist, is_empty):
 
 
 def get_dividends_plots(summary, hist, is_empty):
-    # dividends_plot, div_script = get_portfolio_dividends_plot(hist) if not is_empty else ("", "")
     dividend_history = create_dividend_history(hist)
     for index in range(len(dividend_history)):
         dividend_history[index]["date"] = dividend_history[index]["date"].strftime("%B %Y")
@@ -183,8 +185,6 @@ def get_dividends_plots(summary, hist, is_empty):
     companies_dividends_data = json.dumps(data.to_dict("records"), indent=2)
     data = create_company_tree(["sector", "industry", "name"], summary, "dividends")
     hierarchical_data = json.dumps(data, indent=2)
-    # "div_script": div_script if not is_empty else "",
-    # "dividends_plot": dividends_plot if not is_empty else "",
     return {"companies_dividend_data": companies_dividends_data,
             "hierarchical_dividend_data": hierarchical_data,
             "dividend_history": dividend_history}
@@ -197,7 +197,8 @@ def create_dividend_history(hist):
     if not hist.empty:
         min_date = min(hist.index)
         max_date = datetime(today.year, today.month + 6, 1)
-    history = [({"tax": 0, "date": c_date, "net_amount": 0}) for c_date in get_list_of_dates_per_month(min_date, max_date)]
+    history = [({"tax": 0, "date": c_date, "net_amount": 0}) for c_date in
+               get_list_of_dates_per_month(min_date, max_date)]
     for index, row in hist.iterrows():
         c_index = -1
         for i in range(len(history)):
