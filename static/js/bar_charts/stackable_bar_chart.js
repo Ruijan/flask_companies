@@ -23,13 +23,16 @@ class StackableBarChart extends BarChart {
             .style("padding", "5px")
             .style("width", "auto")
             .style("color", "black")
+        let chart = this
         this.xAxis = g => g
             .attr("transform", `translate(0,${this.height - this.margin.bottom})`)
-            .call(d3.axisBottom(this.x).tickSizeOuter(0))
-            .call(g => g.selectAll(".domain").remove())
+            .call(d3.axisBottom(this.x).tickValues(this.x.domain().filter(function (d, i) {
+                return !(i % Math.ceil(chart.root[0].length / 6))
+            })))
+            .call(g => g.selectAll(".domain").remove());
         this.yAxis = g => g
             .attr("transform", `translate(${this.margin.left},0)`)
-            .call(d3.axisLeft(this.y).ticks(null, "s"))
+            .call(d3.axisLeft(this.y).ticks(5))
             .call(g => g.selectAll(".domain").remove())
             .call(g => g.append("line")
                 .attr("stroke", "currentColor")
@@ -57,7 +60,7 @@ class StackableBarChart extends BarChart {
         let chart = this
         const svg = this.container.append("svg")
             .attr("viewBox", [0, 0, this.width, this.height]);
-        let formatValue = x => isNaN(x) ? "N/A" : (Math.round(x*100) / 100).toLocaleString("en")
+        let formatValue = x => isNaN(x) ? "N/A" : (Math.round(x * 100) / 100).toLocaleString("en")
 
         // Three function that change the tooltip when user hover / move / leave a cell
         let mouseover = function (d) {

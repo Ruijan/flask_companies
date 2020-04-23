@@ -59,11 +59,9 @@ def get_upcoming_dividends(summary, currency):
 def get_world_maps(summary):
     context = {}
     dirpath = os.getcwd()
-    print("current directory is : " + dirpath)
-    foldername = os.path.basename(dirpath)
-    print("Directory name is : " + foldername)
     with open(dirpath + '/resources/world_map.json') as json_file:
         countries = json.load(json_file)
+        countries['features'].pop(6)
         value_per_country = group_value_by_country(summary, "total")
         dividend_per_country = group_value_by_country(summary, "dividends")
         value_per_country = [{"country": key, "value": value_per_country[key]} for key in value_per_country]
