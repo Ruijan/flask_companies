@@ -2,7 +2,7 @@
 class WorldMap extends BarChart{
     constructor(container_name, countries, data) {
         super(container_name, data, ({top: 30, right: 30, bottom: 30, left: 30}));
-        this.countries = countries;
+        this.countries = JSON.parse(JSON.stringify(countries));
 
         this.tooltip = d3.select(this.c_name)
             .append("div")

@@ -72,7 +72,7 @@ class HierarchicalBarChart extends VerticalBarChart{
             .attr("class", "exit");
 
         // Update the x-scale domain.
-        this.x.domain([0, d3.max(d.parent.children, d => d.value)]);
+        this.x.domain([0, d3.max(d.parent.children, d => d.value) * 1.1]);
 
         // Update the x-axis.
         this.svg.selectAll(".x-axis").transition(transition1)
@@ -159,7 +159,7 @@ class HierarchicalBarChart extends VerticalBarChart{
             .attr("transform", stagger(this.x, this.barStep));
 
         // Update the x-scale domain.
-        this.x.domain([0, d3.max(d.children, d => d.value)]);
+        this.x.domain([0, d3.max(d.children, d => d.value) * 1.1]);
 
         // Update the x-axis.
         this.svg.selectAll(".x-axis").transition(transition2)
@@ -205,7 +205,7 @@ class HierarchicalBarChart extends VerticalBarChart{
         }
         let mousemove = function(d) {
             let tip = ""
-            if(d.children != undefined){
+            if(d.children !== undefined){
                 tip = "<tr><td style='text-align: left;'><span style='color: dodgerblue'>Companies</span>: </td>" +
                     "<td style='text-align: right;'>" + getNumberOfChildren(d) + "</td></tr>" +
                     "<tr><td style='text-align: center; padding-left: 5px; padding-right: 5px; color: dodgerblue;' colspan='2'>Click on the bar to expand</td></tr>"
@@ -242,10 +242,10 @@ class HierarchicalBarChart extends VerticalBarChart{
                     .attr('stroke', 'red')
                 bar.append('text')
                     .attr('class', 'divergence')
-                    .attr('x', (a) => chart.x(a.value))
+                    .attr('x', (a) => chart.x(a.value) + 6)
                     .attr('y', (a) => chart.barStep * (1 - chart.barPadding) * 2 /3)
                     .attr('fill', 'white')
-                    .attr('text-anchor', 'right')
+                    .attr('text-anchor', 'start')
                     .text((a, idx) => {
                         const divergence = ((a.value - actual.value)/actual.value * 100).toFixed(1)
                         let text = ''
