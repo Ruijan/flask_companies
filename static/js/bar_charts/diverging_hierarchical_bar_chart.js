@@ -20,7 +20,7 @@ class DivergingHierarchicalBarChart extends VerticalBarChart{
 
     buildSVG(){
         this.center = Math.round(this.width / 2);
-        this.color = d3.scaleOrdinal([0, 1, 2], ["red", "steelblue", "#aaa"])
+        this.color = d3.scaleOrdinal([0, 1, 2], ["#b44682", "#82b446", "#aaa"])
 
         this.svg = this.container.append("svg")
             .attr("preserveAspectRatio", "xMinYMin meet")

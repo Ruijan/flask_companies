@@ -26,6 +26,7 @@
         var countries = {{ countries | tojson }};
         var invested_per_country = {{ invested_per_country | safe }};
         var dividend_per_country = {{ dividend_per_country | safe }};
+        var growth_per_country = {{ growth_per_country | safe }};
         var hierarchical_growth_data = {{ hierarchical_growth_data | safe }};
 
 
@@ -355,6 +356,7 @@
     new StackableBarChart("div#container_dividend_history", dividend_history);
     new WorldMap("div#container_investment_countries", countries, invested_per_country)
     new WorldMap("div#container_dividend_countries", countries, dividend_per_country)
+    new WorldMap("div#container_growth_countries", countries, growth_per_country, true)
     new DivergingHierarchicalBarChart("div#container_growth", hierarchical_growth_data)
     openTab('growth_button', "Growth");
 </script>

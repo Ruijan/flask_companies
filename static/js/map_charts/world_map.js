@@ -1,6 +1,6 @@
 
 class WorldMap extends BarChart{
-    constructor(container_name, countries, data) {
+    constructor(container_name, countries, data, diverging = false) {
         super(container_name, data, ({top: 30, right: 30, bottom: 30, left: 30}));
         this.countries = JSON.parse(JSON.stringify(countries));
 
@@ -22,10 +22,22 @@ class WorldMap extends BarChart{
         var map = d3.map();
         this.root.forEach((d) => map.set(d.country, +d.value))
         let max_value = data.reduce((max, p) => p.value > max ? p.value : max, data[0].value);
-        let colorScale = d3.scaleSequential()
-            .domain([0, max_value * 1.2])
-            .interpolator(d3.interpolateOranges)
-            .unknown("#a5a5a5")
+        let colorScale;
+        if(diverging){
+            let min_value = Math.abs(data.reduce((min, p) => p.value < min ? p.value : min, data[0].value));
+            max_value = max_value > min_value ? max_value : min_value;
+            colorScale = d3.scaleSequential()
+                .domain([-max_value * 1.2, max_value * 1.2])
+                .interpolator(d3.interpolatePiYG)
+                .unknown("#a5a5a5")
+        }
+        else{
+            colorScale = d3.scaleSequential()
+                .domain([0, max_value * 1.2])
+                .interpolator(d3.interpolateRgb("#fff", "#82b446"))
+                .unknown("#a5a5a5")
+        }
+
         this.buildSVG(path, projection, map, colorScale);
     }
 

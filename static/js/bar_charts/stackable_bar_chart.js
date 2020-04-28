@@ -11,7 +11,7 @@ class StackableBarChart extends BarChart {
             .rangeRound([this.height - this.margin.bottom, this.margin.top])
         this.color = d3.scaleOrdinal()
             .domain(this.root.map(d => d.key))
-            .range(["steelblue", "#fc8d59"])
+            .range(["#82b446", "#b44682"])
             .unknown("#ccc")
         this.tooltip = d3.select(this.c_name)
             .append("div")

@@ -63,10 +63,13 @@ def get_world_maps(summary):
         countries['features'].pop(6)
         value_per_country = group_value_by_country(summary, "total")
         dividend_per_country = group_value_by_country(summary, "dividends")
+        growth_per_country = group_value_by_country(summary, "total_change")
         value_per_country = [{"country": key, "value": value_per_country[key]} for key in value_per_country]
         dividend_per_country = [{"country": key, "value": dividend_per_country[key]} for key in dividend_per_country]
+        growth_per_country = [{"country": key, "value": growth_per_country[key]} for key in growth_per_country]
         context.update({"countries": countries, "invested_per_country": value_per_country,
-                        "dividend_per_country": dividend_per_country})
+                        "dividend_per_country": dividend_per_country,
+                        "growth_per_country": growth_per_country})
     return context
 
 
