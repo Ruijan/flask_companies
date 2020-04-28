@@ -58,8 +58,7 @@ def get_upcoming_dividends(summary, currency):
 
 def get_world_maps(summary):
     context = {}
-    dirpath = os.getcwd()
-    with open(dirpath + '/resources/world_map.json') as json_file:
+    with open(os.getcwd() + '/resources/world_map.json') as json_file:
         countries = json.load(json_file)
         countries['features'].pop(6)
         value_per_country = group_value_by_country(summary, "total")
@@ -68,9 +67,6 @@ def get_world_maps(summary):
         dividend_per_country = [{"country": key, "value": dividend_per_country[key]} for key in dividend_per_country]
         context.update({"countries": countries, "invested_per_country": value_per_country,
                         "dividend_per_country": dividend_per_country})
-    # context.update(get_world_map_plot(summary, "total"))
-    # context.update(get_world_map_plot(summary, "dividends"))
-    # context.update(get_world_map_plot(summary, "total_change"))
     return context
 
 
@@ -168,10 +164,13 @@ def get_growth_plot(summary, hist, is_empty):
     close, script = get_portfolio_history_plot(hist) if not is_empty else ("", "")
     data = create_company_tree(["sector", "industry", "name"], summary, "total")
     hierarchical_data = json.dumps(data, indent=2)
+    data = create_company_tree(["sector", "industry", "name"], summary, "total_change")
+    hierarchical_growth_data = json.dumps(data, indent=2)
     return {"script": script if not is_empty else "",
             "close": close if not is_empty else "",
             "hierarchical_investment_data": hierarchical_data,
-            "companies_investment_data": companies_investment_data
+            "companies_investment_data": companies_investment_data,
+            "hierarchical_growth_data": hierarchical_growth_data
             }
 
 

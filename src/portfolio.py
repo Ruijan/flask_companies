@@ -1,6 +1,8 @@
+import ccy
 from pandas import DataFrame, Series
 from datetime import datetime, timedelta
 import numpy as np
+import pycountry
 
 
 class Portfolio:
@@ -62,6 +64,8 @@ class Portfolio:
             if current_time.weekday() > 4:
                 temp_txn["date"] = datetime.strftime(current_time.date() - timedelta(days=current_time.weekday()),
                                                      "%Y-%m-%d")
+            country = pycountry.countries.get(name=company["country"] if company["country"] != "USA" else "United States")
+            company["currency"] = ccy.countryccy(country.alpha_2)
             txn_hist = compute_history(cache, self.currency, temp_txn, company["currency"], company["country"])
             hist = add_txn_hist(hist, txn_hist)
             ref_txn_hist = get_reference_history(self.currency, cache, temp_txn)
@@ -90,12 +94,13 @@ class Portfolio:
         self.transactions.append(data)
         self.total += data["total"]
         company = companies_cache.get(data["ticker"])
+        company["currency"] = ccy.countryccy(pycountry.countries.get(name=company["country"]).alpha_2)
         txn_history = compute_history(cache, self.currency, data, company["currency"], company["country"])
         ref_hist = DataFrame() if self.history.empty else self.history[
-            ["S&P500", "Date", "Amount", "Net_Dividends", "Dividends"]]
+            ["S&P500", "Amount", "Net_Dividends", "Dividends"]]
         if not ref_hist.empty:
-            ref_hist = ref_hist.rename(columns={"S&P500": "Close"}).set_index("Date")
-        hist = DataFrame() if not self.history else self.history.drop("S&P500", axis=1).set_index("Date")
+            ref_hist = ref_hist.rename(columns={"S&P500": "Close"})
+        hist = DataFrame() if self.history.empty else self.history.drop("S&P500", axis=1)
         hist = add_txn_hist(hist, txn_history)
         temp_txn = data.copy()
         ref_txn_hist = get_reference_history(self.currency, cache, temp_txn)

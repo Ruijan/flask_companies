@@ -1,7 +1,7 @@
 
 class VerticalBarChart extends BarChart{
-    constructor(container_name, data) {
-        super(container_name, data, ({top: 30, right: 30, bottom: 30, left: 200}));
+    constructor(container_name, data, margin=({top: 30, right: 30, bottom: 30, left: 200})) {
+        super(container_name, data, margin);
         this.init()
         this.tooltip = d3.select(this.c_name)
             .append("div")

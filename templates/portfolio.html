@@ -13,6 +13,7 @@
     <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/stackable_bar_chart.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/vertical_bar_chart.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/hierarchical_bar_chart.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/diverging_hierarchical_bar_chart.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='js/map_charts/world_map.js') }}"></script>
     <!-- TO BE REMOVED/> -->
     <script>
@@ -25,6 +26,7 @@
         var countries = {{ countries | tojson }};
         var invested_per_country = {{ invested_per_country | safe }};
         var dividend_per_country = {{ dividend_per_country | safe }};
+        var hierarchical_growth_data = {{ hierarchical_growth_data | safe }};
 
 
     </script>
@@ -93,15 +95,6 @@
                         <div id='container_investment_countries'></div>
                     </div>
 
-                    <div class="layout">
-                        <div class="pie_plot">{{ company_pie_script | safe }} {{ company_pie_plot | safe }}</div>
-                    </div>
-
-                    <div class="chart" id="bargraph"></div>
-<!--                    <div id="world_map">-->
-<!--                        {{ world_map_script_total | safe}}-->
-<!--                        {{ world_map_plot_total | safe}}-->
-<!--                    </div>-->
                 </div>
                 
                 <div id="Growth" class="tabcontent" style="display: block;">
@@ -145,10 +138,12 @@
                         {{ script | safe}}
                         {{ close | safe}}
                     </div>
-<!--                    <div id="world_map">-->
-<!--                        {{ world_map_script_total_change | safe}}-->
-<!--                        {{ world_map_plot_total_change | safe}}-->
-<!--                    </div>-->
+                    <div class='layout'>
+                        <h3>Click on a bar to expand. Click on the background to go back.</h3>
+                        <div id='container_growth'></div>
+                        <div id='container_growth_companies'></div>
+                        <div id='container_growth_countries'></div>
+                    </div>
                     
                 </div>
 
@@ -324,15 +319,9 @@
                                 <input type="number" step="0.01" disabled name="total" value="0" hidden=True id="total_add">
                                 <td><input type="text" name="ticker" list="tickers" maxlength=10 required=True placeholder="MSFT" id="ticker_input" onchange="fill_name(tickers);" autocomplete="off">
                                     <datalist id="tickers">
-                                        {% for key in tickers.keys() %}
-                                        <option value="{{ key }}">{{ key }}</option>
-                                        {% endfor %}
                                     </datalist></td>
                                 <td><input type="text" name="name" list="names" required placeholder="Microsoft" id="name_input" onchange="fill_ticker(tickers);" autocomplete="off">
                                     <datalist id="names">
-                                        {% for value in tickers.values() %}
-                                        <option value="{{ value }}">{{ value }}</option>
-                                        {% endfor %}
                                     </datalist></td>
                                 <td><input type="number" step="0.01" name="shares" required placeholder="2" id="shares" onChange="computeTotal('{{ currency }}');"></td>
                                 <td><input type="number" step="0.01" name="price_COS" required placeholder="136.54"></td>
@@ -357,6 +346,7 @@
 </body></html>
 
 <script>
+    fillTransactionFormWithTickers(tickers);
     document.getElementById('date_picker').value = new Date().toDateInputValue();
     new HierarchicalBarChart("div#container_investment", hierarchical_investment_data).svg.node();
     new VerticalBarChart("div#container_investment_companies", companies_investment_data);
@@ -365,6 +355,7 @@
     new StackableBarChart("div#container_dividend_history", dividend_history);
     new WorldMap("div#container_investment_countries", countries, invested_per_country)
     new WorldMap("div#container_dividend_countries", countries, dividend_per_country)
-    openTab('summary_button', "Summary");
+    new DivergingHierarchicalBarChart("div#container_growth", hierarchical_growth_data)
+    openTab('growth_button', "Growth");
 </script>
 

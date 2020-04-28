@@ -144,9 +144,8 @@ def show_portfolio():
             return redirect(url_for("show_portfolio_manager"))
         if request.method == 'POST':
             data = request.form.to_dict(flat=True)
-            companies_cache(companies_cache, portfolio.transactions)
             if data["action"] == "add_transaction":
-                portfolio.add_transaction(data, history_cache, companies_cache, mongo.db.portfolio)
+                portfolio.add_transaction(data, history_cache, companies_cache)
                 tab = "Transactions"
             elif data["action"] == "del":
                 if "id" in data:

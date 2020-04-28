@@ -107,8 +107,8 @@ class WorldMap extends BarChart{
             x = color.copy().rangeRound(d3.quantize(d3.interpolate(marginLeft, width - marginRight), n));
 
             this.svg.append("image")
-                .attr("x", marginLeft)
-                .attr("y", marginTop)
+                .attr("x", this.width - marginRight)
+                .attr("y", this.height - marginTop)
                 .attr("width", width - marginLeft - marginRight)
                 .attr("height", height - marginTop - marginBottom)
                 .attr("preserveAspectRatio", "none")
@@ -122,8 +122,8 @@ class WorldMap extends BarChart{
                 {range() { return [marginLeft, width - marginRight]; }});
 
             this.svg.append("image")
-                .attr("x", marginLeft)
-                .attr("y", marginTop)
+                .attr("x", this.width - marginRight - width)
+                .attr("y", this.height - marginTop - height)
                 .attr("width", width - marginLeft - marginRight)
                 .attr("height", height - marginTop - marginBottom)
                 .attr("preserveAspectRatio", "none")
@@ -142,7 +142,7 @@ class WorldMap extends BarChart{
         }
 
         this.svg.append("g")
-            .attr("transform", `translate(0,${height - marginBottom})`)
+            .attr("transform", `translate(${this.width - width - marginRight},${this.height - height})`)
             .call(d3.axisBottom(x)
                 .ticks(ticks, typeof tickFormat === "string" ? tickFormat : undefined)
                 .tickFormat(typeof tickFormat === "function" ? tickFormat : undefined)
@@ -151,8 +151,8 @@ class WorldMap extends BarChart{
             .call(tickAdjust)
             .call(g => g.select(".domain").remove())
             .call(g => g.append("text")
-                .attr("x", marginLeft)
-                .attr("y", marginTop + marginBottom - height - 6)
+                .attr("x", this.width - marginLeft - width)
+                .attr("y", this.height - 6 - height)
                 .attr("fill", "currentColor")
                 .attr("text-anchor", "start")
                 .attr("font-weight", "bold")

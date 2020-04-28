@@ -40,6 +40,22 @@ function disconnect() {
     window.location.href = "/logout";
 }
 
+function fillTransactionFormWithTickers(tickers){
+    let ticker_options = document.getElementById("tickers");
+    let names_options = document.getElementById("names");
+    for(const key in tickers){
+        ticker_options.appendChild(createOption(key));
+        names_options.appendChild(createOption(tickers[key]));
+    }
+}
+
+function createOption(value){
+    var opt = document.createElement('option');
+    opt.appendChild( document.createTextNode(value) );
+    opt.value = value;
+    return opt;
+}
+
 function add_transaction(tickers) {
     if (document.getElementById('add_transaction').reportValidity()) {
         ticker = document.getElementById('ticker_input').value;
