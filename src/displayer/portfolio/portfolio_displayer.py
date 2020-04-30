@@ -164,13 +164,14 @@ def group_value_by_country(summary, value):
 def get_growth_plot(summary, hist, is_empty):
     data = group_by("name", summary, "total").sort_values(by="value", ascending=False)
     companies_investment_data = json.dumps(data.to_dict("records"), indent=2)
-    close, script = get_portfolio_history_plot(hist) if not is_empty else ("", "")
+    # close, script = get_portfolio_history_plot(hist) if not is_empty else ("", "")
+
     data = create_company_tree(["sector", "industry", "name"], summary, "total")
     hierarchical_data = json.dumps(data, indent=2)
     data = create_company_tree(["sector", "industry", "name"], summary, "total_change")
     hierarchical_growth_data = json.dumps(data, indent=2)
-    return {"script": script if not is_empty else "",
-            "close": close if not is_empty else "",
+    data, data_ratio = get_portfolio_history(hist)
+    return {"history_data": data, "history_ratio_data": data_ratio,
             "hierarchical_investment_data": hierarchical_data,
             "companies_investment_data": companies_investment_data,
             "hierarchical_growth_data": hierarchical_growth_data
@@ -479,6 +480,28 @@ def prettify_plot(p):
     p.legend.background_fill_alpha = 0.0
     p.legend.border_line_width = 0.0
     p.legend.label_text_color = "cornsilk"
+
+
+def get_portfolio_history(hist):
+    close_price = hist["Close"].resample("D").ffill()
+    sp500 = hist["S&P500"].resample("D").ffill()
+    amount = hist["Amount"].resample("D").ffill()
+    dates = amount.index
+    ratio_close = close_price / amount
+    ratio_sp500 = sp500 / amount
+    close_price = close_price.values.flatten().tolist()
+    sp500 = sp500.values.flatten().tolist()
+    amount = amount.values.flatten().tolist()
+    dates = dates.to_pydatetime().tolist()
+    ratio_close = ratio_close.values.flatten().tolist()
+    ratio_sp500 = ratio_sp500.values.flatten().tolist()
+    dates = [dates[index].strftime("%Y-%m-%d") for index in range(len(dates))]
+    data = [{"key": "Close", "values": [{"date": dates[index], "value": close_price[index]} for index in range(len(amount))]},
+            {"key": "SP500", "values": [{"date": dates[index], "value": sp500[index]} for index in range(len(amount))]},
+            {"key": "Invested", "values": [{"date": dates[index], "value": amount[index]} for index in range(len(amount))]}]
+    data_ratio = [{"Close": [{"date": dates[index], "value": ratio_close[index]} for index in range(len(amount))]},
+                  {"SP500": [{"date": dates[index], "value": ratio_sp500[index]} for index in range(len(amount))]}]
+    return data, data_ratio
 
 
 def get_portfolio_history_plot(hist):

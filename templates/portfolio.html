@@ -15,6 +15,7 @@
     <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/hierarchical_bar_chart.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/diverging_hierarchical_bar_chart.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='js/map_charts/world_map.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/line_charts/line_chart.js') }}"></script>
     <!-- TO BE REMOVED/> -->
     <script>
         var tickers = {{ tickers | tojson }};
@@ -28,6 +29,8 @@
         var dividend_per_country = {{ dividend_per_country | safe }};
         var growth_per_country = {{ growth_per_country | safe }};
         var hierarchical_growth_data = {{ hierarchical_growth_data | safe }};
+        var history_data = {{ history_data | safe }};
+        var history_ratio_data = {{ history_ratio_data | safe }};
 
 
     </script>
@@ -140,6 +143,7 @@
                         {{ close | safe}}
                     </div>
                     <div class='layout'>
+                        <div id='container_historical_growth'></div>
                         <h3>Click on a bar to expand. Click on the background to go back.</h3>
                         <div id='container_growth'></div>
                         <div id='container_growth_companies'></div>
@@ -358,6 +362,7 @@
     new WorldMap("div#container_dividend_countries", countries, dividend_per_country)
     new WorldMap("div#container_growth_countries", countries, growth_per_country, true)
     new DivergingHierarchicalBarChart("div#container_growth", hierarchical_growth_data)
+    new LineChart("div#container_historical_growth", history_data)
     openTab('growth_button', "Growth");
 </script>
 

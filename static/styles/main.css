@@ -24,6 +24,7 @@ body {
     color: cornsilk;
 }
 
+
 .last_update_recent {
     border-radius: 5px;
     background-color: green;
@@ -71,7 +72,13 @@ div#container {
     margin: auto;
 }
 
-line#limit {
+line#horizontal_limit, line#vertical_limit{
+    stroke: #fff;
+    stroke-width: 1;
+    stroke-dasharray: 3 6;
+}
+
+line#limit{
     stroke: #FED966;
     stroke-width: 3;
     stroke-dasharray: 3 6;
