@@ -15,9 +15,11 @@ from src.cache.local_history_cache import LocalHistoryCache
 from src.cache.currencies import Currencies
 from src.displayer.portfolio.portfolio_displayer import format_amount
 from flask_simple_geoip import SimpleGeoIP
+from werkzeug.middleware.profiler import ProfilerMiddleware
 
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]
+# app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 pymongo_connected = False
 companies_cache = None
 mongo = None
@@ -142,9 +144,8 @@ def show_portfolio():
             return redirect(url_for("show_portfolio_manager"))
         if request.method == 'POST':
             data = request.form.to_dict(flat=True)
-            companies_cache(companies_cache, portfolio.transactions)
             if data["action"] == "add_transaction":
-                portfolio.add_transaction(data, history_cache, companies_cache, mongo.db.portfolio)
+                portfolio.add_transaction(data, history_cache, companies_cache)
                 tab = "Transactions"
             elif data["action"] == "del":
                 if "id" in data:
