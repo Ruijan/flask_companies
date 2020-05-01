@@ -5,6 +5,7 @@ Created on Mon Feb 24 21:05:20 2020
 @author: Julien
 """
 #import all_functions
+import sys
 import time
 from all_functions import compute_dividends
 from src.crawler.companies_crawler import process_companies
@@ -14,7 +15,7 @@ import os
 from multiprocessing.pool import ThreadPool
 
 global pool
-pool = ThreadPool(processes=5)
+
 
 
 if __name__ == '__main__':
@@ -22,17 +23,19 @@ if __name__ == '__main__':
     if action == "crawler":
         client = pymongo.MongoClient(os.environ["MONGO_URI"])
         db = client.finance
+        pool = ThreadPool(processes=5)
         collection = db.cleaned_companies
         companies = pd.DataFrame.from_records(collection.find().sort("last_update", 1).limit(100))
         tickers = list(companies.ticker.values)
         tickers = pd.DataFrame.from_records(db.tickers.find({"Ticker": {"$in": tickers}}))
 
         logs = ""
-        process_companies(companies, pool, tickers, db, logs, 30)
+        process_companies(companies, pool, tickers, db, logs, 200)
         client.close()
+        pool.terminate()
     elif action == "screener":
         start_time = time.time()
-        client = pymongo.MongoClient(os.environ['MONGO_URI'].strip("'").replace('test', 'finance'))
+        client = pymongo.MongoClient(os.environ['MONGO_URI'].strip("'").replace('test', 'staging_finance'))
         db = client.finance
         collection = db.cleaned_companies
         print("Creating --- %s seconds ---" % (time.time() - start_time))

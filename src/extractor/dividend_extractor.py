@@ -29,7 +29,7 @@ class DividendExtractor(Extractor):
                 "dividend_history": dict()}
         for table in soup.findAll("table", {"class": "W(100%) M(0)"}):
             for row in table.findAll("tr"):
-                if row_index > 0 and row.find("td").findNext("td") != None:
+                if row_index > 0 and row.find("td").findNext("td") is not None:
                     date = row.find("td").text
                     value = row.find("td").findNext("td").text
                     if 'Dividend' in value:
@@ -125,18 +125,19 @@ def get_yearly_dividends(dividends, stock_splits):
 
 def get_continuous_dividend_payment(yearly_dividends):
     count_years = 0
-    shifted_div = yearly_dividends.values[0:-1]
-    shifted_dates = yearly_dividends.index[0:-1]
-    divdiff = (shifted_div - yearly_dividends.values[1:]) / shifted_div * 100
-    datediff = (shifted_dates - yearly_dividends.index[1:]) / shifted_dates * 100
-    divdiff = divdiff.flatten()
-    if shifted_dates[0] == datetime.today().year:
-        divdiff = np.delete(divdiff, 0)
-    nb_tot_years = len(divdiff)
-    for index in range(nb_tot_years):
-        if divdiff[index] < 0 or datediff[index] > 1:
-            return count_years
-        count_years += 1
+    if len(yearly_dividends) > 1:
+        shifted_div = yearly_dividends.values[0:-1]
+        shifted_dates = yearly_dividends.index[0:-1]
+        divdiff = (shifted_div - yearly_dividends.values[1:]) / shifted_div * 100
+        datediff = (shifted_dates - yearly_dividends.index[1:]) / shifted_dates * 100
+        divdiff = divdiff.flatten()
+        if shifted_dates[0] == datetime.today().year:
+            divdiff = np.delete(divdiff, 0)
+        nb_tot_years = len(divdiff)
+        for index in range(nb_tot_years):
+            if divdiff[index] < 0 or datediff[index] > 1:
+                return count_years
+            count_years += 1
     return count_years
 
 
