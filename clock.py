@@ -13,7 +13,7 @@ scheduler = BlockingScheduler()
 def timed_job():
     print('This job is run every five minutes.')
     client = pymongo.MongoClient(os.environ["MONGO_URI"])
-    db = client.finance
+    db = client.staging_finance if os.environ['FLASK_DEBUG'] else client.finance
     collection = db.cleaned_companies
     pool = ThreadPool(processes=5)
     try:

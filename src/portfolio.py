@@ -34,8 +34,8 @@ class Portfolio:
                          portfolio["total"], portfolio["current"], portfolio["transactions"])
 
     def update(self, cache, cache_companies, db_portfolio):
+        now = datetime.now()
         if len(self.transactions) > 0:
-            now = datetime.now()
             diff_time = (now - self.last_update)
             if 60 < diff_time.seconds and diff_time.days < 1 and now.weekday() < 5:
                 self.process_portfolio(cache, cache_companies, refresh=True)
@@ -108,19 +108,14 @@ class Portfolio:
         conversion_rate = get_current_conversion_rate(company["currency"], self.currency, cache)
         c_div = company["stats"]["forward_annual_dividend_rate"] * temp_txn["shares"] * conversion_rate
         self.add_txn_to_positions(c_div, company, data, txn_history)
-        self.stats = {"div_rate": 0, "net_div_rate": 0, "cagr1": 0, "cagr3": 0, "cagr5": 0, "payout_ratio": 0,
-                      "years_of_growth": 0}
-        for txn in self.transactions:
-            conversion_rate = get_current_conversion_rate(company["currency"], self.currency, cache)
-            c_div = company["stats"]["forward_annual_dividend_rate"] * txn["shares"] * conversion_rate
-            self.add_txn_to_stats(c_div, company, txn)
+
         for ticker, position in self.positions.items():
             position["total_change_perc"] = position["total_change"] / position["total"] * 100
             position["daily_change_perc"] = position["daily_change"] / position["previous_total"] * 100
             position["current_price"] = cache.get_last_day(ticker)["Close"]
         if self.transactions:
             hist["S&P500"] = ref_hist["Close"]
-        self.compute_stats(hist)
+        self.compute_stats(hist, company, cache)
 
     def remove_transaction(self, data, cache, companies_cache):
         index = [index for index in range(len(self.transactions))
@@ -141,17 +136,17 @@ class Portfolio:
         conversion_rate = get_current_conversion_rate(company["currency"], self.currency, cache)
         c_div = company["stats"]["forward_annual_dividend_rate"] * temp_txn["shares"] * conversion_rate
         self.remove_txn_from_positions(c_div, txn, txn_history)
-        self.stats = {"div_rate": 0, "net_div_rate": 0, "cagr1": 0, "cagr3": 0, "cagr5": 0, "payout_ratio": 0,
-                      "years_of_growth": 0}
-        for temp_txn in self.transactions:
-            conversion_rate = get_current_conversion_rate(company["currency"], self.currency, cache)
-            c_div = company["stats"]["forward_annual_dividend_rate"] * temp_txn["shares"] * conversion_rate
-            self.add_txn_to_stats(c_div, company, temp_txn)
         hist["S&P500"] = ref_hist["Close"]
         self.history = hist
-        self.compute_stats(hist)
+        self.compute_stats(hist, company, cache)
 
-    def compute_stats(self, hist):
+    def compute_stats(self, hist, company, cache):
+        self.stats = {"div_rate": 0, "net_div_rate": 0, "cagr1": 0, "cagr3": 0, "cagr5": 0, "payout_ratio": 0,
+                      "years_of_growth": 0}
+        for txn in self.transactions:
+            conversion_rate = get_current_conversion_rate(company["currency"], self.currency, cache)
+            c_div = company["stats"]["forward_annual_dividend_rate"] * txn["shares"] * conversion_rate
+            self.add_txn_to_stats(c_div, company, txn)
         is_empty = len(self.transactions) == 0
         self.total = hist["Amount"].values[-1] if not is_empty else 0
         diff_price = (

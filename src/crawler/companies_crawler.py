@@ -9,6 +9,7 @@ def process_companies(db_companies, pool, companies, db, logs, max_time):
     crawler = CompanyExtractor(pool)
     count_error = 0
     for index, company in companies.iterrows():
+        print(company["Ticker"])
         if time.time() - start_time > max_time:
             return
         db_company = db_companies.loc[db_companies['ticker'] == company["Ticker"]].squeeze()
@@ -23,6 +24,7 @@ def process_companies(db_companies, pool, companies, db, logs, max_time):
         data["error_financial"] = bool(data["error_financial"])
         dict_data = data.to_dict()
         previous_company = db.cleaned_companies.find_one_and_replace({'_id': db_company["_id"]}, dict_data)
+        print("Total request time --- %s seconds ---" % (time.time() - start_time))
         if status == "ERROR" or previous_company is None:
             count_error += 1
         elif status == "OK":
