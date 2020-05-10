@@ -229,21 +229,3 @@ class Degiro:
         r = requests.post(url, headers=headers, data=payload)
         data = r.json()
         return data["data"]
-
-
-if __name__ == '__main__':
-    deg = Degiro()
-    deg.login("Ruijan83n", 'Nuggets83n!', None, with2fa=True)
-    deg.get_degiro_config()
-    deg.get_client_config()
-    deg.get_data()
-    product_ids = [position["id"] for position in deg.data["portfolio"]["value"] if position["id"].isdigit()]
-    products = deg.get_products_by_ids(product_ids)
-    movements = deg.get_account_overview("01/01/1970", datetime.now().strftime("%m/%d/%Y"))
-    for movement in movements:
-        movement["ticker"] = products[str(movement["productId"])]["symbol"]
-        movement["name"] = products[str(movement["productId"])]["name"]
-    print(movements)
-    deg2 = Degiro(deg.user, deg.data, None, deg.session_id, deg.account_id)
-    deg.get_degiro_config()
-    deg.get_client_config()

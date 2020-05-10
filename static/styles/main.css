@@ -294,6 +294,17 @@ svg {
     cursor: pointer;
 }
 
+.portfolio_import_button {
+    border-radius: 5px;
+    background-color: skyblue;
+    width: 25%;
+    text-align: center;
+    float: left;
+    margin: 10px;
+    height: 100px;
+    cursor: pointer;
+}
+
 #add_portfolio_form {
     width: 30%;
     margin: auto;

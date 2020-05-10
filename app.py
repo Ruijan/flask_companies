@@ -273,6 +273,7 @@ def register():
 @app.route('/import_portfolio', methods=['GET'])
 @login_required
 def import_portfolio():
+    start_time = time.time()
     user = DegiroUser.create_from_db(mongo.db.users, session["USER"], encryptor)
     degiro = Degiro(user=None, data=None, session_id=user.session_id, account_id=user.account_id)
     try:
@@ -285,6 +286,7 @@ def import_portfolio():
     product_ids = [position["id"] for position in degiro.data["portfolio"]["value"] if position["id"].isdigit()]
     products = degiro.get_products_by_ids(product_ids)
     movements = degiro.get_account_overview("01/01/1970", datetime.now().strftime("%m/%d/%Y"))
+    print("Degiro total request time --- %s seconds ---" % (time.time() - start_time))
     names = tickers["Name"].tolist()
     names = [str(name).lower() for name in names]
     modified_tickers = tickers["Ticker"].tolist()
@@ -311,6 +313,8 @@ def import_portfolio():
                  "summary": {}, "stats": {}, "last_update": datetime.now()}
     mongo.db.portfolio.insert_one(portfolio)
     portfolio = Portfolio.retrieve_from_database(mongo.db.portfolio, session["USER"], "Degiro")
+    companies_cache.update_from_transactions(movements)
+    history_cache.update_from_transactions(movements, companies_cache, portfolio.currency)
     for movement in movements:
         portfolio.add_transaction(movement, history_cache, companies_cache)
     update_portfolio(portfolio)

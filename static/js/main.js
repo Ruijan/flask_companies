@@ -2,6 +2,10 @@ function showCompany(ticker) {
     window.location.href = "/screener/" + ticker;
 }
 
+function import_portfolio() {
+    window.location.href = "/import_portfolio";
+}
+
 function show_portfolio(portfolio_name) {
     window.location.href = "/portfolio?name=" + portfolio_name;
 }
