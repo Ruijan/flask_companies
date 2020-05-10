@@ -1,3 +1,8 @@
+function showLogin(method){
+    document.getElementById(method).classList.remove("d-none");
+    document.getElementById('select_method').classList.add("d-none");
+}
+
 
 (function ($) {
     "use strict";
@@ -40,6 +45,7 @@
            hideValidate(this);
         });
     });
+
 
     function validate (input) {
         if($(input).attr('type') == 'email' || $(input).attr('name') == 'email') {

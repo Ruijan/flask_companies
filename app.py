@@ -1,25 +1,33 @@
 import os
 import time
-
+from functools import wraps
 import pandas as pd
+import pycountry
+import ccy
 from flask import Flask, session, render_template, redirect, url_for
 from flask_pymongo import PyMongo, request
+from src.brokers.degiro import Degiro
 from src.cache.companies_cache import CompaniesCache
+from src.currency import Currency
 from src.displayer.company_displayer import display_company
 from all_functions import print_companies_to_html
 from cryptography.fernet import Fernet
 from datetime import datetime
 from src.displayer.portfolio.portfolio_displayer import render_portfolio
-from src.portfolio import Portfolio
+from src.portfolio.portfolio import Portfolio
 from src.cache.local_history_cache import LocalHistoryCache
 from src.cache.currencies import Currencies
 from src.displayer.portfolio.portfolio_displayer import format_amount
 from flask_simple_geoip import SimpleGeoIP
-from werkzeug.middleware.profiler import ProfilerMiddleware
+from difflib import SequenceMatcher
+from src.user.degiro_user import DegiroUser
+from src.user.user import User
+from src.user.authenticator import AuthenticationException, AuthenticatorFactory
+from src.user.registor import RegistrationException
+from src.user.registor import RegistratorFactory
 
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]
-# app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 pymongo_connected = False
 companies_cache = None
 mongo = None
@@ -31,6 +39,7 @@ if 'MONGO_URI' in os.environ and not pymongo_connected:
     app.config['MONGO_DBNAME'] = 'staging_finance' if os.environ['FLASK_DEBUG'] else 'finance'
     app.config['MONGO_URI'] = os.environ['MONGO_URI'].strip("'").replace('test', app.config['MONGO_DBNAME'])
     app.config["GEOIPIFY_API_KEY"] = os.environ['WHOIS_KEY']
+    encryptor = Fernet(bytes(os.environ["MONGO_KEY"], 'utf-8'))
     mongo = PyMongo(app)
     simple_geoip = SimpleGeoIP(app)
     pymongo_connected = True
@@ -38,12 +47,38 @@ if 'MONGO_URI' in os.environ and not pymongo_connected:
     tickers = pd.DataFrame.from_records(mongo.db.tickers.find())
 
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not is_user_connected():
+            return redirect(url_for('login', error_login="You must be connected to access this page"))
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def create_user_session(user):
+    session["USER"] = str(user.id)
+    session["USER_TYPE"] = str(user.type)
+    session.new = True
+
+
 def is_user_connected():
-    if session.get("USER") and mongo.db.users.find_one({"email": session["USER"]}) is not None:
+    user_id = session.get("USER")
+    if user_id and User.does_id_exist(mongo.db.users, user_id):
         return True
-    elif session.get("USER"):
+    elif user_id:
         session.clear()
     return False
+
+
+# WARNING - ERASE ALL DATABASE - ONLY USE FOR CLEAN START ON STAGING
+@app.route('/clean_start')
+def clean_start():
+    mongo.db.users.drop()
+    mongo.db.portfolio.drop()
+    session.clear()
+    return redirect(url_for("login"))
 
 
 @app.route('/')
@@ -71,6 +106,7 @@ def explore_companies():
 
 
 @app.route('/refresh_staging')
+@login_required
 def refresh_staging_prod():
     collections = mongo.db.client.finance.list_collection_names()
     for collection in collections:
@@ -79,7 +115,7 @@ def refresh_staging_prod():
         mongo.db.client.staging_finance[collection].drop()
         for index in range(0, len(documents), 100):
             if index + 100 < len(documents):
-                mongo.db.client.staging_finance[collection].insert_many(documents[index:index+100])
+                mongo.db.client.staging_finance[collection].insert_many(documents[index:index + 100])
             else:
                 mongo.db.client.staging_finance[collection].insert_many(documents[index:len(documents)])
 
@@ -93,24 +129,24 @@ def show_company(ticker):
     return "No company found"
 
 
-@app.route('/portfolios-manager', methods=['GET', 'POST'])
+@app.route('/portfolios-manager', methods=['GET'])
+@login_required
 def show_portfolio_manager():
-    if is_user_connected():
-        if request.method == 'POST':
-            data = request.form.to_dict(flat=True)
-            portfolio = mongo.db.portfolio.find_one({"email": session["USER"], "name": data["name"]})
-            if portfolio is None:
-                portfolio = {"email": session["USER"], "name": data["name"], "transactions": [], "total": 0,
-                             "currency": data["currency"], "id_txn": 0, "history": {}, "current": 0,
-                             "summary": {}, "stats": {}, "last_update": datetime.now()}
-                mongo.db.portfolio.insert_one(portfolio)
-                return redirect(url_for("show_portfolio", name=data["name"]))
-            else:
-                return display_portfolios_manager()
-        else:
-            return display_portfolios_manager()
-    else:
-        return redirect(url_for("login"))
+    return display_portfolios_manager()
+
+
+@app.route('/portfolios-manager', methods=['POST'])
+@login_required
+def add_portfolio():
+    data = request.form.to_dict(flat=True)
+    portfolio = mongo.db.portfolio.find_one({"email": session["USER"], "name": data["name"]})
+    if portfolio is not None:
+        return display_portfolios_manager()
+    portfolio = {"email": session["USER"], "name": data["name"], "transactions": [], "total": 0,
+                 "currency": data["currency"], "id_txn": 0, "history": {}, "current": 0,
+                 "summary": {}, "stats": {}, "last_update": datetime.now()}
+    mongo.db.portfolio.insert_one(portfolio)
+    return redirect(url_for("show_portfolio", name=data["name"]))
 
 
 def display_portfolios_manager():
@@ -118,9 +154,9 @@ def display_portfolios_manager():
     portfolios = list(mongo.db.portfolio.find({"email": session["USER"]}))
     is_portfolio = len(portfolios)
     for portfolio in portfolios:
-        portfolio["total"] = format_amount(portfolio["total"], portfolio["currency"])
+        portfolio["total"] = format_amount(portfolio["total"], Currency(portfolio["currency"]))
         if "current" in portfolio:
-            portfolio["current"] = format_amount(portfolio["current"], portfolio["currency"])
+            portfolio["current"] = format_amount(portfolio["current"], Currency(portfolio["currency"]))
         else:
             portfolio["current"] = portfolio["total"]
     keys = sorted(list(currencies.keys()))
@@ -129,33 +165,16 @@ def display_portfolios_manager():
                            currencies=keys)
 
 
-@app.route('/portfolio', methods=['GET', 'POST'])
+@app.route('/portfolio', methods=['GET'])
 def show_portfolio():
     request_start = time.time()
-    global companies_cache
-    global mongo
-    global tickers
-    global history_cache
     if is_user_connected():
         portfolio_name = request.args.get("name")
         portfolio = Portfolio.retrieve_from_database(mongo.db.portfolio, session["USER"], portfolio_name)
         tab = "Summary"
         if portfolio is None:
             return redirect(url_for("show_portfolio_manager"))
-        if request.method == 'POST':
-            data = request.form.to_dict(flat=True)
-            if data["action"] == "add_transaction":
-                portfolio.add_transaction(data, history_cache, companies_cache)
-                tab = "Transactions"
-            elif data["action"] == "del":
-                if "id" in data:
-                    portfolio.remove_transaction(data, history_cache, companies_cache, mongo.db.portfolio)
-        companies_cache.update_from_transactions(portfolio.transactions)
-        if 60 < (datetime.now() - portfolio.last_update).seconds < 24 * 60 * 60:
-            history_cache.today_update_from_transactions(portfolio.transactions, companies_cache, portfolio.currency)
-        else:
-            history_cache.update_from_transactions(portfolio.transactions, companies_cache, portfolio.currency)
-        portfolio.update(history_cache, companies_cache, mongo.db.portfolio)
+        update_portfolio(portfolio)
         element = render_portfolio(portfolio, tickers, tab)
         print("Total request time --- %s seconds ---" % (time.time() - request_start))
         return element
@@ -164,89 +183,139 @@ def show_portfolio():
         return redirect(url_for("login"))
 
 
-@app.route('/login', methods=['GET', 'POST'])
+def update_portfolio(portfolio):
+    companies_cache.update_from_transactions(portfolio.transactions)
+    if 60 < (datetime.now() - portfolio.last_update).seconds < 24 * 60 * 60:
+        history_cache.today_update_from_transactions(portfolio.transactions, companies_cache, portfolio.currency)
+    else:
+        history_cache.update_from_transactions(portfolio.transactions, companies_cache, portfolio.currency)
+    portfolio.update(history_cache, companies_cache, mongo.db.portfolio)
+
+
+@app.route('/portfolio', methods=['POST'])
+def handle_txn():
+    if is_user_connected():
+        portfolio_name = request.args.get("name")
+        portfolio = Portfolio.retrieve_from_database(mongo.db.portfolio, session["USER"], portfolio_name)
+        if portfolio is None:
+            return redirect(url_for("show_portfolio_manager"))
+        data = request.form.to_dict(flat=True)
+        tab = "Summary"
+        if data["action"] == "add_transaction":
+            portfolio.add_transaction(data, history_cache, companies_cache)
+            tab = "Transactions"
+        elif data["action"] == "del":
+            if "id" in data:
+                portfolio.remove_transaction(data, history_cache, companies_cache)
+        update_portfolio(portfolio)
+        element = render_portfolio(portfolio, tickers, tab)
+        return element
+    else:
+        return redirect(url_for("login"))
+
+
+@app.route('/login', methods=['GET'])
+def show_login_form():
+    if is_user_connected():
+        return redirect(url_for("show_portfolio_manager"))
+    data = request.args
+    if "error_login" in data:
+        return render_template("login.html", error_login=data["error_login"])
+    return render_template("login.html")
+
+
+@app.route('/login', methods=['POST'])
 def login():
     global mongo
     if is_user_connected():
         return redirect(url_for("show_portfolio_manager"))
-    if request.method == 'GET':
-        return render_template("login.html")
-    if request.method == 'POST':
-        data = request.form
-        f = Fernet(bytes(os.environ["MONGO_KEY"], 'utf-8'))
-        users = list(mongo.db.users.find())
-        user = None
-        for tmp_user in users:
-            if isinstance(tmp_user["email"], bytes):
-                email = f.decrypt(tmp_user["email"]).decode("utf-8")
-                if email == data["email"]:
-                    user = tmp_user
-            elif tmp_user["email"] == data["email"]:
-                user = tmp_user
-                user["first_name"] = f.encrypt(user["first_name"].encode())
-                user["last_name"] = f.encrypt(user["last_name"].encode())
-                user["email"] = f.encrypt(user["email"].encode())
-                mongo.db.users.find_one_and_replace({"email": data["email"]}, user)
-                portfolios = list(mongo.db.portfolio.find({"email": data["email"]}))
-                for portfolio in portfolios:
-                    portfolio["email"] = user["email"]
-                    mongo.db.portfolio.find_one_and_replace({"email": data["email"]}, portfolio)
-        if user is not None:
-            db_pass = f.decrypt(user["pass"]).decode("utf-8")
-            if db_pass == data["pass"]:
-                session["KEY"] = os.environ["MONGO_KEY"]
-                session["USER"] = user["email"]
-                session.new = True
-                return redirect(url_for("show_portfolio_manager"))
-            else:
-                return render_template("login.html", error_login="Wrong password")
-        else:
-            return render_template("login.html", error_login="No user found with username")
+    data = request.form
+    try:
+        authenticator = AuthenticatorFactory.create(data["login_method"], encryptor, mongo.db.users)
+        user = authenticator.authenticate(data)
+        create_user_session(user)
+        return redirect(url_for("show_portfolio_manager"))
+    except AuthenticationException as err:
+        return render_template("login.html", error_login=err)
+    except Exception as err:
+        raise err
 
 
 @app.route('/logout')
 def logout():
     if session.get("USER"):
-        data = mongo.db.users.find_one({"email": session["USER"]})
-        if data is not None:
-            data["connected"] = False
-            data["last_connection"] = datetime.now()
         session.clear()
     return redirect(url_for("login"))
 
 
-@app.route('/register', methods=['GET', 'POST'])
+@app.route('/register', methods=['GET'])
+def show_registration_form():
+    if is_user_connected():
+        return redirect(url_for("show_portfolio_manager"))
+    return render_template("register.html")
+
+
+@app.route('/register', methods=['POST'])
 def register():
     global mongo
     if is_user_connected():
         return redirect(url_for("show_portfolio_manager"))
-    if request.method == 'GET':
-        return render_template("register.html")
-    if request.method == 'POST':
-        data = request.form.to_dict(flat=True)
-        f = Fernet(bytes(os.environ["MONGO_KEY"], 'utf-8'))
-        data["pass"] = f.encrypt(data["pass"].encode())
-        data["first_name"] = f.encrypt(data["first_name"].encode())
-        data["last_name"] = f.encrypt(data["last_name"].encode())
-        data["email"] = f.encrypt(data["email"].encode())
-        data["creation_date"] = datetime.now()
-        data["geolocation"] = simple_geoip.get_geoip_data()
-        data.pop("pass2")
-        user = None
-        try:
-            user = mongo.db.users.find_one({"email": data["email"]})
-        except:
-            pass
-        if user is None:
-            data["connected"] = True
-            data["last_connection"] = datetime.now()
-            mongo.db.users.insert_one(data)
-            session["KEY"] = os.environ["MONGO_KEY"]
-            session["USER"] = data["email"]
-            session.new = True
-            return redirect(url_for("show_portfolio_manager"))
-        else:
-            return render_template("login.html", error_login="Email already in database. Try signing in")
+    data = request.form.to_dict(flat=True)
+    try:
+        registrator = RegistratorFactory.create(data["registration_method"], encryptor, mongo.db.users)
+        user = registrator.register(data, simple_geoip)
+        create_user_session(user)
+        return redirect(url_for("show_portfolio_manager"))
+    except RegistrationException as err:
+        return render_template("login.html", error_login=err)
+
+
+@app.route('/import_portfolio', methods=['GET'])
+@login_required
+def import_portfolio():
+    user = DegiroUser.create_from_db(mongo.db.users, session["USER"], encryptor)
+    degiro = Degiro(user=None, data=None, session_id=user.session_id, account_id=user.account_id)
+    try:
+        degiro.get_client_config()
+        degiro.get_degiro_config()
+        degiro.get_data()
+    except ConnectionError as err:
+        session.clear()
+        return redirect(url_for('login', error_login="Session expired"))
+    product_ids = [position["id"] for position in degiro.data["portfolio"]["value"] if position["id"].isdigit()]
+    products = degiro.get_products_by_ids(product_ids)
+    movements = degiro.get_account_overview("01/01/1970", datetime.now().strftime("%m/%d/%Y"))
+    names = tickers["Name"].tolist()
+    names = [str(name).lower() for name in names]
+    modified_tickers = tickers["Ticker"].tolist()
+    modified_tickers = [ticker.split('.')[0] for ticker in modified_tickers]
+    for movement in movements:
+        ticker = products[str(movement["productId"])]["symbol"]
+        currency = products[str(movement["productId"])]["currency"]
+        name = products[str(movement["productId"])]["name"].lower()
+        indexes = [index for index in range(len(modified_tickers)) if modified_tickers[index] == ticker ]
+        if len(indexes) > 0:
+            for index in indexes:
+                country = tickers["Country"][index]
+                country = pycountry.countries.get(
+                    name=country if country != "USA" else "United States")
+                company_currency = ccy.countryccy(country.alpha_2)
+                company_name = names[index]
+                similarity_index = SequenceMatcher(None, name, company_name).ratio()
+                if similarity_index > 0.5 and currency == company_currency:
+                    movement["ticker"] = tickers["Ticker"].tolist()[index]
+                    movement["name"] = tickers["Name"].tolist()[index]
+        movement["date"] = movement["date"].strftime("%Y-%m-%d")
+    portfolio = {"email": session["USER"], "name": "Degiro", "transactions": [], "total": 0,
+                 "currency": "EUR", "id_txn": 0, "history": {}, "current": 0,
+                 "summary": {}, "stats": {}, "last_update": datetime.now()}
+    mongo.db.portfolio.insert_one(portfolio)
+    portfolio = Portfolio.retrieve_from_database(mongo.db.portfolio, session["USER"], "Degiro")
+    for movement in movements:
+        portfolio.add_transaction(movement, history_cache, companies_cache)
+    update_portfolio(portfolio)
+    return redirect(url_for("show_portfolio_manager"))
+
 
 
 if __name__ == '__main__':

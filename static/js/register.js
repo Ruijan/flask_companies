@@ -1,3 +1,8 @@
+function showRegister(method){
+    document.getElementById("select_method").classList.add("d-none");
+    document.getElementById(method).classList.remove("d-none");
+}
+
 var password = document.getElementById("pass");
 var confirm_password = document.getElementById("pass2");
 

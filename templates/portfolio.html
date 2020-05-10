@@ -319,7 +319,7 @@
                         </tr>
                         
                         <tr class="input_row">
-                            <form id="add_transaction" target="_self" method="post">
+                            <form id="add_transaction" target="_self" method="post" class="form-group">
                                 <input type="text" name="action" hidden=True value="add_transaction">
                                 <input type="number" step="0.01" disabled name="total" value="0" hidden=True id="total_add">
                                 <td><input type="text" name="ticker" list="tickers" maxlength=10 required=True placeholder="MSFT" id="ticker_input" onchange="fill_name(tickers);" autocomplete="off">

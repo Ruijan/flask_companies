@@ -47,7 +47,7 @@ def get_transaction_table(portfolio):
 
 def get_upcoming_dividends(summary, currency):
     upcoming_dividends = [{"ticker": key,
-                           "amount": format_currency(position["dividends"] / position["dividend_frequency"], currency,
+                           "amount": format_currency(position["dividends"] / position["dividend_frequency"], currency.short,
                                                      locale='en_US'),
                            "date": (position["ex_dividend_date"] - datetime.today()).days}
                           for key, position in summary.items() if
@@ -379,7 +379,7 @@ def get_portfolio_summary_table(summary, currency):
 
 
 def format_amount(amount, currency):
-    return format_currency(amount, currency, locale='en_US')
+    return format_currency(amount, currency.short, locale='en_US')
 
 
 def format_percentage_change(percentage_change):
@@ -483,18 +483,25 @@ def prettify_plot(p):
 
 
 def get_portfolio_history(hist):
-    close_price = hist["Close"].resample("D").ffill()
-    sp500 = hist["S&P500"].resample("D").ffill()
-    amount = hist["Amount"].resample("D").ffill()
-    dates = amount.index
-    ratio_close = close_price / amount
-    ratio_sp500 = sp500 / amount
-    close_price = close_price.values.flatten().tolist()
-    sp500 = sp500.values.flatten().tolist()
-    amount = amount.values.flatten().tolist()
-    dates = dates.to_pydatetime().tolist()
-    ratio_close = ratio_close.values.flatten().tolist()
-    ratio_sp500 = ratio_sp500.values.flatten().tolist()
+    amount = []
+    dates = []
+    sp500 = []
+    close_price = []
+    ratio_close = []
+    ratio_sp500 = []
+    if not hist.empty:
+        close_price = hist["Close"].resample("D").ffill()
+        sp500 = hist["S&P500"].resample("D").ffill()
+        amount = hist["Amount"].resample("D").ffill()
+        dates = amount.index
+        ratio_close = close_price / amount
+        ratio_sp500 = sp500 / amount
+        close_price = close_price.values.flatten().tolist()
+        sp500 = sp500.values.flatten().tolist()
+        amount = amount.values.flatten().tolist()
+        dates = dates.to_pydatetime().tolist()
+        ratio_close = ratio_close.values.flatten().tolist()
+        ratio_sp500 = ratio_sp500.values.flatten().tolist()
     dates = [dates[index].strftime("%Y-%m-%d") for index in range(len(dates))]
     data = [{"key": "Close", "values": [{"date": dates[index], "value": close_price[index]} for index in range(len(amount))]},
             {"key": "SP500", "values": [{"date": dates[index], "value": sp500[index]} for index in range(len(amount))]},
