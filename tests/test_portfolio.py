@@ -15,6 +15,7 @@ class PortfolioTestCase(unittest.TestCase):
         self.user = "user_id"
         self.stats = pd.DataFrame()
         self.history = pd.DataFrame()
+        self.dividend_transactions = []
         self.last_update = datetime.now()
         self.positions = dict()
         self.currency = Currency("USD")
@@ -24,7 +25,8 @@ class PortfolioTestCase(unittest.TestCase):
         self.transactions = []
 
     def test_portfolio_creation(self):
-        portfolio = Portfolio(self.name, self.user, self.stats, self.history, self.last_update, self.positions,
+        portfolio = Portfolio(self.name, self.user, self.stats, self.history, self.dividend_transactions,
+                              self.last_update, self.positions,
                               self.currency, self.identifier, self.total, self.current,
                               self.transactions)
         self.assertEqual(self.name, portfolio.name)
@@ -40,7 +42,7 @@ class PortfolioTestCase(unittest.TestCase):
         self.assertEqual(self.transactions, portfolio.transactions)
 
     def test_portfolio_creation_without_optional_fields(self):
-        portfolio = Portfolio(self.name, self.user, None, None, None, None,
+        portfolio = Portfolio(self.name, self.user, None, None, None, None, {},
                               self.currency, self.identifier, None, None,
                               None)
         self.assertEqual(self.name, portfolio.name)
@@ -57,12 +59,12 @@ class PortfolioTestCase(unittest.TestCase):
 
     def test_portfolio_creation_without_name(self):
         with self.assertRaises(AttributeError):
-            Portfolio("", self.user, self.stats, self.history, self.last_update, self.positions,
+            Portfolio("", self.user, self.stats, self.history, self.dividend_transactions, self.last_update, self.positions,
                       self.currency, self.identifier, self.total, self.current,
                       self.transactions)
 
     def test_portfolio_creation_with_wrong_currency(self):
         with self.assertRaises(AttributeError):
-            Portfolio(self.name, self.user, self.stats, self.history, self.last_update, self.positions,
+            Portfolio(self.name, self.user, self.stats, self.history,self.dividend_transactions, self.last_update, self.positions,
                       "USD", self.identifier, self.total, self.current,
                       self.transactions)
