@@ -13,7 +13,7 @@ from src.displayer.company_displayer import display_company
 from all_functions import print_companies_to_html
 from cryptography.fernet import Fernet
 from datetime import datetime
-from src.displayer.portfolio.portfolio_displayer import render_portfolio
+from src.displayer.portfolio.portfolio_displayer import get_portfolio_context
 from src.portfolio.portfolio import Portfolio
 from src.cache.local_history_cache import LocalHistoryCache
 from src.cache.currencies import Currencies
@@ -59,6 +59,7 @@ def login_required(f):
 
 def create_user_session(user):
     session["USER"] = str(user.id)
+    session["FIRST_NAME"] = str(user.first_name)
     session["USER_TYPE"] = str(user.type)
     session.new = True
 
@@ -142,7 +143,7 @@ def add_portfolio():
     portfolio = mongo.db.portfolio.find_one({"email": session["USER"], "name": data["name"]})
     if portfolio is not None:
         return display_portfolios_manager()
-    portfolio = {"email": session["USER"], "name": data["name"], "transactions": [], "total": 0,
+    portfolio = {"email": session["USER"], "name": data["name"], "transactions": [], "total": 0, "dividend_history": {},
                  "currency": data["currency"], "id_txn": 0, "history": {}, "current": 0,
                  "summary": {}, "stats": {}, "last_update": datetime.now()}
     mongo.db.portfolio.insert_one(portfolio)
@@ -166,21 +167,19 @@ def display_portfolios_manager():
 
 
 @app.route('/portfolio', methods=['GET'])
+@login_required
 def show_portfolio():
     request_start = time.time()
-    if is_user_connected():
-        portfolio_name = request.args.get("name")
-        portfolio = Portfolio.retrieve_from_database(mongo.db.portfolio, session["USER"], portfolio_name)
-        tab = "Summary"
-        if portfolio is None:
-            return redirect(url_for("show_portfolio_manager"))
-        update_portfolio(portfolio)
-        element = render_portfolio(portfolio, tickers, tab)
-        print("Total request time --- %s seconds ---" % (time.time() - request_start))
-        return element
-    else:
-        print("Total request time --- %s seconds ---" % (time.time() - request_start))
-        return redirect(url_for("login"))
+    portfolio_name = request.args.get("name")
+    portfolio = Portfolio.retrieve_from_database(mongo.db.portfolio, session["USER"], portfolio_name)
+    tab = "Summary"
+    if portfolio is None:
+        return redirect(url_for("show_portfolio_manager"))
+    update_portfolio(portfolio)
+    context = get_portfolio_context(portfolio, tickers, tab)
+    context["user_id"] = session["USER"]
+    print("Total request time --- %s seconds ---" % (time.time() - request_start))
+    return render_template("portfolio.html", **context)
 
 
 def update_portfolio(portfolio):
@@ -193,25 +192,24 @@ def update_portfolio(portfolio):
 
 
 @app.route('/portfolio', methods=['POST'])
+@login_required
 def handle_txn():
-    if is_user_connected():
-        portfolio_name = request.args.get("name")
-        portfolio = Portfolio.retrieve_from_database(mongo.db.portfolio, session["USER"], portfolio_name)
-        if portfolio is None:
-            return redirect(url_for("show_portfolio_manager"))
-        data = request.form.to_dict(flat=True)
-        tab = "Summary"
-        if data["action"] == "add_transaction":
-            portfolio.add_transaction(data, history_cache, companies_cache)
-            tab = "Transactions"
-        elif data["action"] == "del":
-            if "id" in data:
-                portfolio.remove_transaction(data, history_cache, companies_cache)
-        update_portfolio(portfolio)
-        element = render_portfolio(portfolio, tickers, tab)
-        return element
-    else:
-        return redirect(url_for("login"))
+    portfolio_name = request.args.get("name")
+    portfolio = Portfolio.retrieve_from_database(mongo.db.portfolio, session["USER"], portfolio_name)
+    if portfolio is None:
+        return redirect(url_for("show_portfolio_manager"))
+    data = request.form.to_dict(flat=True)
+    tab = "Summary"
+    if data["action"] == "add_transaction":
+        portfolio.add_transaction(data, history_cache, companies_cache)
+        tab = "Transactions"
+    elif data["action"] == "del":
+        if "id" in data:
+            portfolio.remove_transaction(data, history_cache, companies_cache)
+    update_portfolio(portfolio)
+    context = get_portfolio_context(portfolio, tickers, tab)
+    context["user_id"] = session["USER"]
+    return render_template("portfolio.html", **context)
 
 
 @app.route('/login', methods=['GET'])
@@ -285,7 +283,7 @@ def import_portfolio():
         return redirect(url_for('login', error_login="Session expired"))
     product_ids = [position["id"] for position in degiro.data["portfolio"]["value"] if position["id"].isdigit()]
     products = degiro.get_products_by_ids(product_ids)
-    movements = degiro.get_account_overview("01/01/1970", datetime.now().strftime("%m/%d/%Y"))
+    movements = degiro.get_account_overview("01/01/1970", datetime.now().strftime("%d/%m/%Y"))
     print("Degiro total request time --- %s seconds ---" % (time.time() - start_time))
     names = tickers["Name"].tolist()
     names = [str(name).lower() for name in names]
@@ -308,7 +306,7 @@ def import_portfolio():
                     movement["ticker"] = tickers["Ticker"].tolist()[index]
                     movement["name"] = tickers["Name"].tolist()[index]
         movement["date"] = movement["date"].strftime("%Y-%m-%d")
-    portfolio = {"email": session["USER"], "name": "Degiro", "transactions": [], "total": 0,
+    portfolio = {"email": session["USER"], "name": "Degiro", "transactions": [], "total": 0, "dividend_history": {},
                  "currency": "EUR", "id_txn": 0, "history": {}, "current": 0,
                  "summary": {}, "stats": {}, "last_update": datetime.now()}
     mongo.db.portfolio.insert_one(portfolio)

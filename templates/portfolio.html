@@ -4,9 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/main.css') }}">
-    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-2.0.0.min.js"></script>
-    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.0.0.min.js"></script>
-    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.0.0.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <!-- JS, Popper.js, and jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/bar_chart.js') }}"></script>
@@ -24,6 +26,7 @@
         var hierarchical_dividend_data = {{ hierarchical_dividend_data | safe }};
         var companies_dividend_data = {{ companies_dividend_data | safe }};
         var dividend_history = {{ dividend_history | safe }};
+        const dividends = {{ dividends | safe }};
         var countries = {{ countries | tojson }};
         var invested_per_country = {{ invested_per_country | safe }};
         var dividend_per_country = {{ dividend_per_country | safe }};
@@ -31,7 +34,7 @@
         var hierarchical_growth_data = {{ hierarchical_growth_data | safe }};
         var history_data = {{ history_data | safe }};
         var history_ratio_data = {{ history_ratio_data | safe }};
-
+        var dividend_name_ascending, dividend_ticker_ascending, dividend_amount_ascending, dividend_date_ascending = false;
 
     </script>
     <script type="text/javascript" src="../static/js/main.js"></script>
@@ -39,14 +42,28 @@
 </head>
 
 <body>
-    <div style="overflow:auto;">
-        <div class="menu">
-            <div onclick="got_to_portfolio_manager()" class="menu_button">Portfolios</div>
-            <div onclick="go_to_screener()" class="menu_button">Screener</div>
+    <nav class="navbar navbar-dark navbar-expand-lg" style="background-color: #302E2E;">
+        <a class="navbar-brand" href="#">Cresus</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+            <div class="navbar-nav">
+                <a class="nav-item nav-link active" href="#" onclick="got_to_portfolio_manager()">Portfolios <span class="sr-only">(current)</span></a>
+                <a class="nav-item nav-link" href="#" onclick="go_to_screener()">Screener</a>
+                <a class="nav-item nav-link" href="#">Pricing</a>
+            </div>
         </div>
+        {% if user_id %}
+            <button class="btn btn-danger my-2 my-sm-0 mr-3" onclick="disconnect();">Logout</button> 
+        {% else %}
+            <button class="btn btn-primary my-2 my-sm-0 mr-3" onclick="go_to_login();">Login</button> 
+            <button class="btn btn-success my-2 my-sm-0 mr-3" onclick="go_to_register();">Sign-up</button>
+        {% endif %}
+    </nav>
+    <div style="overflow:auto;">
         <div class="main_content">
             <div>
-                <div class="logout-button" onclick="disconnect();">Log Out</div>
                 <div class="title">
                     <h1>Portfolio Dashboard</h1>
                 </div>
@@ -64,8 +81,8 @@
                 <div id="Summary" class="tabcontent" style="display: block;">
                     <h1>{{ name | safe}}</h1>
                     <table class="div_info" >
-                        <tr><td><h1>Invested</h1></td><td><h1>Current</h1></td><td><h1> Today</h1></td><td><h1>Total</h1></td></tr>
-                        <tr><td><h1>{{ total | safe}}</h1></td><td><h1>{{ current | safe}} </h1></td><td><h1>{{ today_change | safe}}<br>{{ diff_today_current_price | safe }}</h1></td><td><h1>{{ total_change | safe}}<br>{{ diff_current_price | safe }}</h1></td></tr>
+                        <tr><td><h2>Invested</h2></td><td><h2>Current</h2></td><td><h2> Today</h2></td><td><h2>Total</h2></td></tr>
+                        <tr><td><h2>{{ total | safe}}</h2></td><td><h2>{{ current | safe}} </h2></td><td><h2>{{ today_change | safe}}<br>{{ diff_today_current_price | safe }}</h2></td><td><h2>{{ total_change | safe}}<br>{{ diff_current_price | safe }}</h2></td></tr>
 
                     </table>
                     <table class="dataframe" id="summary_table">
@@ -91,7 +108,7 @@
                             {% endif %}
                         </tbody>
                     </table>
-                    <h1>Investment Diversification</h1>
+                    <h2>Investment Diversification</h2>
                     <div class='layout'>
                         <h3>Click on a bar to expand. Click on the background to go back.</h3>
                         <div id='container_investment'></div>
@@ -122,19 +139,19 @@
                         </tr>
                         <tr>
                             <td>
-                                <h1>{{ today_change | safe}}</h1>
+                                <h2>{{ today_change | safe}}</h2>
                             </td>
                             <td>
-                                <h1>{{ week_change | safe}}</h1>
+                                <h2>{{ week_change | safe}}</h2>
                             </td>
                             <td>
-                                <h1>{{ month_change | safe}}</h1>
+                                <h2>{{ month_change | safe}}</h2>
                             </td>
                             <td>
-                                <h1>{{ year_change | safe}}</h1>
+                                <h2>{{ year_change | safe}}</h2>
                             </td>
                             <td>
-                                <h1>{{ total_change | safe}}</h1>
+                                <h2>{{ total_change | safe}}</h2>
                             </td>
                         </tr>
                     </table>
@@ -152,160 +169,157 @@
                     
                 </div>
 
-                <div id="Dividends" class="tabcontent" style="display: block;">
-                    <p class="div_score">{{ div_score | safe}}</p>
-                    <div id="upcoming_dividends">
-                        <h1>Upcoming Dividends</h1>
-                        <table class="dataframe left">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Ticker</th>
-                                    <th>Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if upcoming_dividends %}
-                                    {% for dividend in upcoming_dividends %}
+                <div id="Dividends" class="tabcontent" style="display: block; paddint-top: 0px;">
+                    <div class="row p-5" style="background-color: #98908a;">
+                        <div class="col-xl-7 p-3">
+                            <div class="row justify-content-md-center mb-3">
+                                <div class="col-sm-5">
+                                    <div class="card text-center bg-transparent border-0">
+                                        <h2>{{ div_yield | safe}}</h2><br>
+                                        Dividend Yield
+                                    </div>
+                                </div>
+                                <div class="col-sm-5">
+                                    <div class="card text-center bg-transparent border-0">
+                                        <h2>{{ net_div_yield | safe}}</h2><br>
+                                        Net Dividend Yield
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row justify-content-md-center">
+                                <div class="col-sm-5">
+                                    <div class="card text-center bg-transparent border-0">
+                                        <h2>{{ annual_div | safe}}</h2><br>
+                                        Annual Dividends
+                                    </div>
+                                </div>
+                                <div class="col-sm-5">
+                                    <div class="card text-center bg-transparent border-0">
+                                        <h2>{{ net_annual_div | safe}}</h2><br>
+                                        Net Annual Dividends
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-5 p-3">
+                            <div>
+                                <h2>Upcoming Dividends</h2>
+                                <table class="dataframe2 left">
+                                    <thead>
                                         <tr>
-                                            <td> {{dividend["date"]}} days</td>
-                                            <td> {{dividend["ticker"]}} </td>
-                                            <td> {{dividend["amount"]}} </td>
+                                            <th>Date</th>
+                                            <th>Ticker</th>
+                                            <th>Amount</th>
                                         </tr>
-                                        
-                                    {% endfor %}
-                                {% else %}
-                                    <td colspan="3">No upcoming dividends</td>
-                                {% endif %}
-                            </tbody>
-                        </table>
-                        
-                    </div>
-                    <div class="block_60">
-                        <table class="div_info">
-                            <tr>
-                                <th>
-                                    <h3>Div. Yield</h3>
-                                </th>
-                                <th>
-                                    <h3>Net dividend yield</h3>
-                                </th>
-                                <th>
-                                    <h3>Annual Dividends</h3>
-                                </th>
-                                <th>
-                                    <h3>Net Annual Dividends</h3>
-                                </th>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <h2>{{ div_yield | safe}}</h2>
-                                </td>
-                                <td>
-                                    <h2>{{ net_div_yield | safe}}</h2>
-                                </td>
-                                <td>
-                                    <h2>{{ annual_div | safe}}</h2>
-                                </td>
-                                <td>
-                                    <h2>{{ net_annual_div | safe}}</h2>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                    <h1>History</h1>
-                    <table class="div_info">
-                        <tr>
-                            <th>
-                                <h3>Received Dividends</h3>
-                            </th>
-                            <th>
-                                <h3>Received Net Dividends</h3>
-                            </th>
-                        </tr>
-                        <tr>
-                            <td>
-                                <h2>{{ received_div | safe}}</h2>
-                            </td>
-                            <td>
-                                <h2>{{ net_received_div | safe}}</h2>
-                            </td>
-                        </tr>
-                    </table>
-                    <div class='layout'>
-                        <div id="container_dividend_history"></div>
-                    </div>
-                    <div id="graphDiv">
-                        {{ div_script | safe }}
-                        {{ dividends_plot | safe }}
-                    </div>
-                    <h1>Growth</h1>
-                    <table class="div_info">
-                        <tr>
-                            <th>
-                                <h3>1 Year Growth Rate</h3>
-                            </th>
-                            <th>
-                                <h3>3 Years Growth Rate</h3>
-                            </th>
-                            <th>
-                                <h3>5 Years Growth Rate</h3>
-                            </th>
-                        </tr>
-                        <tr>
-                            <td>
-                                <h2>{{ cagr1 | safe}}</h2>
-                            </td>
-                            <td>
-                                <h2>{{ cagr3 | safe}}</h2>
-                            </td>
-                            <td>
-                                <h2>{{ cagr5 | safe}}</h2>
-                            </td>
-                        </tr>
-                    </table>
-                    <h1>Stability & Security</h1>
-                    <table class="div_info">
-                        <tr>
-                            <th>
-                                <h3>Payout Ratio</h3>
-                            </th>
-                            <th>
-                                <h3>Dividend Growth</h3>
-                            </th>
-                            <th>
-                                <h3>Dividend Growth Stability</h3>
-                            </th>
-                        </tr>
-                        <tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if upcoming_dividends %}
+                                            {% for dividend in upcoming_dividends %}
+                                                <tr>
+                                                    <td> {{dividend["date"]}} days</td>
+                                                    <td> {{dividend["ticker"]}} </td>
+                                                    <td> {{dividend["amount"]}} </td>
+                                                </tr>
 
-                            <td>
-                                <h2>{{ payout | safe}}</h2>
-                            </td>
-                            <td>
-                                <h2>{{ growth | safe}} Years</h2>
-                            </td>
-                            <td>
-                                <h2>{{ growth_stability | safe}}</h2>
-                            </td>
-                        </tr>
-                    </table>
-                    <h1>Dividend diversification</h1>
-
-                    <div class='layout'>
-                        <h3>Click on bars to expand. Click on background to go back.</h3>
-                        <div id="container_dividend"></div>
-                        <div id="container_dividend_companies"></div>
-                        <div id="container_dividend_countries"></div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <td colspan="3">No upcoming dividends</td>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-<!--                    <div id="world_map">-->
-<!--                        {{ world_map_script_dividends | safe}}-->
-<!--                        {{ world_map_plot_dividends | safe}}-->
-<!--                    </div>-->
+                    <div class="p-5">
+                        <h2>History</h2>
+                        <div class="row justify-content-md-center">
+                            <div class="col-sm-4">
+                                <div class="card text-center bg-transparent border-0 m-3">
+                                    <h2>{{ received_div | safe}}</h2><br>
+                                    Received Dividends
+                                </div>
+                            </div>
+
+                            <div class="col-sm-4">
+                                <div class="card text-center bg-transparent border-0 m-3">
+                                    <h2>{{ net_received_div | safe}}</h2><br>
+                                    Received Net Dividends
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class='layout'>
+                            <div id="container_dividend_history"></div>
+                        </div>
+                        <table class='dataframe mb-3' id="dividend_table">
+                            <tr>
+                                <th onclick="dividend_ticker_ascending = fillDividendsHistory(dividends, 1, 'Tickers', dividend_ticker_ascending);">Yahoo Ticker</th>
+                                <th onclick="dividend_ticker_ascending = fillDividendsHistory(dividends, 1, 'Name', dividend_ticker_ascending);">Name</th>
+                                <th onclick="dividend_amount_ascending = fillDividendsHistory(dividends, 1, 'Dividends', dividend_amount_ascending);">Amount</th>
+                                <th onclick="dividend_date_ascending = fillDividendsHistory(dividends, 1, 'Date', dividend_date_ascending);">Date</th>
+                            </tr>
+                        </table>
+                        <div id="pagination_dividend"></div>
+                    </div>
+                    <div class="p-5">
+                        <h2>Growth</h2>
+                        <div class="row justify-content-md-center">
+                            <div class="col-sm-4">
+                                <div class="card text-center bg-transparent border-0 m-3">
+                                    <h2>{{ cagr1 | safe}}</h2><br>
+                                    1 Year Growth Rate
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="card text-center bg-transparent border-0 m-3">
+                                    <h2>{{ cagr3 | safe}}</h2><br>
+                                    3 Year Growth Rate
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="card text-center bg-transparent border-0 m-3">
+                                    <h2>{{ cagr5 | safe}}</h2><br>
+                                    5 Year Growth Rate
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-5">
+                        <h2>Stability & Security</h2>
+                        <div class="row justify-content-md-center">
+                            <div class="col-sm-4">
+                                <div class="card text-center bg-transparent border-0 m-3">
+                                    <h2>{{ payout | safe}}</h2><br>
+                                    Payout Ratio
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="card text-center bg-transparent border-0 m-3">
+                                    <h2>{{ growth | safe}} years</h2><br>
+                                    Dividend Growth
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="card text-center bg-transparent border-0 m-3">
+                                    <h2>{{ growth_stability | safe}}</h2><br>
+                                    Dividend Growth Stability
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-5">
+                        <h2>Dividend diversification</h2>
+                        <div class='layout mt-3'>
+                            <h4>Click on bars to expand. Click on background to go back.</h4>
+                            <div id="container_dividend"></div>
+                            <div id="container_dividend_companies"></div>
+                            <div id="container_dividend_countries"></div>
+                        </div>
+                    </div>
                 </div>
                 <div id="Transactions" class="tabcontent" style="display: block;">
                     <div id="error_add_transaction"></div>
-                    <table class="dataframe" id="transaction_table">
+                    <table class="dataframe mb-5" id="transaction_table">
                         <tr>
                             <th onclick="sortTable(0, 'transaction_table', 2)">Yahoo Ticker</th>
                             <th onclick="sortTable(1, 'transaction_table', 2)">Name</th>
@@ -352,6 +366,7 @@
 
 <script>
     fillTransactionFormWithTickers(tickers);
+    fillDividendsHistory(dividends, 1);
     document.getElementById('date_picker').value = new Date().toDateInputValue();
     new HierarchicalBarChart("div#container_investment", hierarchical_investment_data).svg.node();
     new VerticalBarChart("div#container_investment_companies", companies_investment_data);

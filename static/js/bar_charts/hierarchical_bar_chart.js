@@ -118,6 +118,19 @@ class HierarchicalBarChart extends VerticalBarChart{
             .transition(transition2)
             .attr("width", d => this.x(d.value) - this.x(0))
             .on("end", function(p) { d3.select(this).attr("fill-opacity", 1); });
+        this.add_distribution_label(d.parent, enter, transition2);
+    }
+
+    add_distribution_label(d, enter, transition2) {
+        let sumValue = d.value;
+        enter.selectAll("g").append("text")
+            .attr("x", d => this.x(d.value))
+            .attr("y", this.barStep * (1 - this.barPadding) / 2)
+            .attr("dy", ".35em")
+            .text(d => (Math.round(d.value / sumValue * 100)).toString() + "%").style('fill', 'cornsilk')
+            .attr("fill", d => this.color(!!d.children))
+            .attr("fill-opacity", p => p === d ? 0 : null)
+            .transition(transition2);
     }
 
     down(d) {
@@ -170,12 +183,14 @@ class HierarchicalBarChart extends VerticalBarChart{
             .attr("transform", (d, i) => `translate(0,${this.barStep * i})`);
 
         // Color the bars as parents; they will fade to children if appropriate.
+        enter.selectAll("text")
         enter.selectAll("rect")
             .attr("fill", this.color(true))
             .attr("fill-opacity", 1)
             .transition(transition2)
             .attr("fill", d => this.color(!!d.children))
             .attr("width", d => this.x(d.value) - this.x(0));
+        this.add_distribution_label(d, enter, transition2);
     }
 
     // Creates a set of bars for the given data node, at the specified index.
@@ -198,6 +213,7 @@ class HierarchicalBarChart extends VerticalBarChart{
             .attr("y", this.barStep * (1 - this.barPadding) / 2)
             .attr("dy", ".35em")
             .text(d => d.data.name).style('fill', 'cornsilk');
+
 
         // Three function that change the tooltip when user hover / move / leave a cell
         let mouseover = function(d) {
@@ -224,6 +240,7 @@ class HierarchicalBarChart extends VerticalBarChart{
             chart.tooltip
                 .style("opacity", 0)
         }
+
 
         bar.append("rect")
             .attr("x", this.x(0))
@@ -262,10 +279,10 @@ class HierarchicalBarChart extends VerticalBarChart{
                 mouseleave(actual);
             })
             .on('mousemove',mousemove);
-
         return g;
     }
 }
+
 
 function stagger(x, barStep) {
     let value = 0;

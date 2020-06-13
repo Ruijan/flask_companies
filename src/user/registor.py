@@ -39,7 +39,10 @@ class EmailRegistrator(Registrator):
 class DegiroRegistrator(Registrator):
     def register(self, data, locator):
         degiro = Degiro()
-        degiro.login(data["username"], data["password"], data["code"] if len(data["code"]) > 0 else None)
+        try:
+            degiro.login(data["username"], data["password"], data["code"] if len(data["code"]) > 0 else None)
+        except ConnectionError as err:
+            raise RegistrationException(err)
         now = datetime.now()
         user = DegiroUser(None, degiro.user["firstContact"]["firstName"],
                           degiro.user["firstContact"]["lastName"],

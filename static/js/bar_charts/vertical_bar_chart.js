@@ -15,7 +15,7 @@ class VerticalBarChart extends BarChart{
             .style("color", "black")
         this.color = d3.scaleOrdinal([true, false], ["steelblue", "#aaa"])
         this.x = d3.scaleLinear().range([this.margin.left, this.width - this.margin.right])
-        this.x.domain([0, this.computeMaxXDomain()]);
+        this.x.domain([0, this.computeMaxXDomain()*1.1]);
         this.buildSVG();
     }
 
@@ -115,10 +115,10 @@ class VerticalBarChart extends BarChart{
                     .attr('stroke', 'red')
                 bar.append('text')
                     .attr('class', 'divergence')
-                    .attr('x', (a) => chart.x(a.value))
+                    .attr('x', (a) => chart.x(a.value) + 6)
                     .attr('y', (a, i) => chart.barStep * i + chart.barStep * (1 - chart.barPadding) * 2 /3)
                     .attr('fill', 'white')
-                    .attr('text-anchor', 'right')
+                    .attr('text-anchor', 'start')
                     .text((a, idx) => {
                         const divergence = ((a.value - actual.value)/actual.value * 100).toFixed(1)
                         let text = ''
@@ -135,7 +135,12 @@ class VerticalBarChart extends BarChart{
                 mouseleave(actual);
             })
             .on('mousemove',mousemove);
-
+        let sumValue = d.reduce((count, a) => count + a["value"], 0);
+        bar.append("text")
+            .attr("x", d => this.x(d.value))
+            .attr("y", (d,i) => chart.barStep * i + this.barStep * (1 - this.barPadding) / 2)
+            .attr("dy", ".35em")
+            .text(d => (Math.round(d.value/sumValue*100)).toString()+ "%").style('fill', 'cornsilk');
         return g;
     }
 

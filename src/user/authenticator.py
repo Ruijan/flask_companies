@@ -35,7 +35,10 @@ class DegiroAuthenticator(Authenticator):
 
     def authenticate(self, data):
         degiro = Degiro()
-        degiro.login(data["username"], data["password"], data["code"] if len(data["code"]) > 0 else None)
+        try:
+            degiro.login(data["username"], data["password"], data["code"] if len(data["code"]) > 0 else None)
+        except ConnectionError as err:
+            raise AuthenticationException(err)
         user = self.collection.find_one({"email": degiro.user["email"], "type": "degiro"})
         if user is None:
             raise AuthenticationException("Unknown email. Try to register.")

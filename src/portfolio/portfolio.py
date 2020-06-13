@@ -11,8 +11,8 @@ from src.portfolio.position import Position
 
 
 class Portfolio:
-    def __init__(self, name, user, stats, history, last_update, positions, currency, identifier, total, current,
-                 transactions):
+    def __init__(self, name, user, stats, history, dividend_transactions, last_update, positions, currency, identifier,
+                 total, current, transactions):
         if len(name) == 0:
             raise AttributeError("Name should be at least one character")
         if isinstance(currency, Currency) == 0:
@@ -21,6 +21,7 @@ class Portfolio:
         self.user = user
         self.stats = stats if stats is not None else DataFrame()
         self.history = history if history is not None else DataFrame()
+        self.dividend_transactions = dividend_transactions if dividend_transactions is not None else DataFrame()
         self.last_update = last_update if last_update is not None else datetime.now()
         self.positions = dict()
         for ticker, position in positions.items():
@@ -44,8 +45,13 @@ class Portfolio:
         if "history" in portfolio and not portfolio["history"].empty:
             if portfolio["history"].index.name != "Date":
                 portfolio["history"].set_index("Date", inplace=True)
+        portfolio["dividend_history"] = DataFrame.from_dict(portfolio["dividend_history"])
+        if "dividend_history" in portfolio and not portfolio["dividend_history"].empty:
+            if portfolio["dividend_history"].index.name != "Date":
+                portfolio["dividend_history"].set_index("Date", inplace=True)
         return Portfolio(portfolio["name"], portfolio["email"], portfolio["stats"],
                          portfolio["history"] if "history" in portfolio else None,
+                         portfolio["dividend_history"] if "dividend_history" in portfolio else None,
                          portfolio["last_update"], portfolio["summary"], Currency(portfolio["currency"]),
                          portfolio["_id"],
                          portfolio["total"], portfolio["current"], portfolio["transactions"])
@@ -87,6 +93,15 @@ class Portfolio:
 
             txn_hist = compute_history(cache, self.currency, temp_txn, Currency(company["currency"]),
                                        company["country"])
+            dividends = txn_hist.loc[txn_hist["Dividends"] > 0, "Dividends"]
+            name = [txn["ticker"]] * len(dividends)
+            df = {"Date": dividends.index, "Dividends": dividends.values, "Tickers": name}
+            dividends = DataFrame(df)
+            dividends.set_index("Date", inplace=True)
+            if self.dividend_transactions.empty:
+                self.dividend_transactions = dividends
+            else:
+                self.dividend_transactions = self.dividend_transactions.append(dividends)
             hist = add_txn_hist(hist, txn_hist)
             ref_txn_hist = get_reference_history(self.currency, cache, temp_txn)
             ref_hist = add_txn_hist(ref_hist, ref_txn_hist)
@@ -116,7 +131,8 @@ class Portfolio:
         company = companies_cache.get(transaction["ticker"])
         country = pycountry.countries.get(name=company["country"] if company["country"] != "USA" else "United States")
         company["currency"] = ccy.countryccy(country.alpha_2)
-        txn_history = compute_history(cache, self.currency, transaction, Currency(company["currency"]), company["country"])
+        txn_history = compute_history(cache, self.currency, transaction, Currency(company["currency"]),
+                                      company["country"])
         ref_hist = DataFrame() if self.history.empty else self.history[
             ["S&P500", "Amount", "Net_Dividends", "Dividends"]]
         if not ref_hist.empty:
@@ -197,7 +213,9 @@ class Portfolio:
         for ticker in positions.keys():
             positions[ticker] = positions[ticker].json_format()
         history = self.history.reset_index().to_dict(orient="list") if not self.history.empty else {}
+        dividend_history = self.dividend_transactions.reset_index().to_dict(orient="list") if not self.dividend_transactions.empty else {}
         return {"_id": self.id, "email": self.user, "name": self.name, "transactions": self.transactions,
+                "dividend_history": dividend_history,
                 "total": self.total, "currency": self.currency.short, "current": self.current, "summary": positions,
                 "stats": self.stats, "history": history, "last_update": self.last_update,
                 "id_txn": self.index_transaction}
@@ -238,7 +256,7 @@ def get_history(cache, ticker, date, shares, end_date=datetime.now()):
     hist = cache.get(ticker, date, end_date)
     is_all_nan = hist.isna().all().all()
     if not is_all_nan:
-        hist = hist.drop(["Open", "High", "Low", "Volume", "Stock Splits"], axis=1)
+        hist = hist.drop(["Open", "High", "Low", "Volume", "Stock Splits"], axis=1, errors='ignore')
 
         hist["Dividends"] *= shares
         hist["Close"] *= shares

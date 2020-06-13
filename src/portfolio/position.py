@@ -60,7 +60,7 @@ class Position(dict):
         previous_close = txn_hist["Close"][-2] if len(txn_hist["Close"]) > 1 else txn["total"]
         previous_date = txn_hist.index[-1] if len(txn_hist.index) > 0 else datetime.today()
         self["shares"] += txn["shares"]
-        self["current_price"] = current_close
+        self["current_price"] = current_close/txn["shares"]
         self["dividends"] += c_div
         self["total"] += txn["total"]
         if (datetime.today() - previous_date).days >= 1:

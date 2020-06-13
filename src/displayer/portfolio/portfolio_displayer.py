@@ -21,7 +21,7 @@ import matplotlib.cm
 from bokeh.models import ColorBar, LogColorMapper, LogTicker, LinearColorMapper, BasicTicker
 
 
-def render_portfolio(portfolio, tickers, tab):
+def get_portfolio_context(portfolio, tickers, tab):
     is_empty = not portfolio.transactions
 
     all_tickers = tickers[["Ticker", "Name"]].set_index("Ticker").to_dict()["Name"]
@@ -29,13 +29,13 @@ def render_portfolio(portfolio, tickers, tab):
     context.update(get_all_price_change(portfolio.history, is_empty, portfolio))
     context.update(get_portfolio_info(portfolio))
     context.update(get_growth_plot(portfolio.positions, portfolio.history, is_empty))
-    context.update(get_dividends_plots(portfolio.positions, portfolio.history, is_empty))
+    context.update(get_dividends_plots(portfolio.positions, portfolio.history, portfolio.dividend_transactions, is_empty))
     context["portfolio"] = get_portfolio_summary_table(portfolio.positions, portfolio.currency)
     context["upcoming_dividends"] = get_upcoming_dividends(portfolio.positions, portfolio.currency)
     context["transactions"] = get_transaction_table(portfolio)
     context.update(get_world_maps(portfolio.positions))
     context.update(get_dividends_info(portfolio.history, portfolio.stats, portfolio.currency, is_empty))
-    return render_template("portfolio.html", **context)
+    return context
 
 
 def get_transaction_table(portfolio):
@@ -178,17 +178,25 @@ def get_growth_plot(summary, hist, is_empty):
             }
 
 
-def get_dividends_plots(summary, hist, is_empty):
+def get_dividends_plots(summary, hist, dividends, is_empty):
     dividend_history = create_dividend_history(hist)
     for index in range(len(dividend_history)):
         dividend_history[index]["date"] = dividend_history[index]["date"].strftime("%B %Y")
+    dict_dividends = dividends.reset_index()
+    dict_dividends.sort_values(by=['Date'], inplace=True, ascending=False)
+    dict_dividends["Name"] = [0] * len(dict_dividends["Date"])
+    for index in range(len(dict_dividends["Date"])):
+        dict_dividends["Name"][index] = summary[dict_dividends["Tickers"][index]]["name"]
+        dict_dividends["Date"][index] = dict_dividends["Date"][index].strftime("%Y-%m-%d")
+    dict_dividends = dict_dividends.groupby(["Date", "Name", "Tickers"]).sum().reset_index().to_dict()
     data = group_by("name", summary, "dividends").sort_values(by="value", ascending=False)
     companies_dividends_data = json.dumps(data.to_dict("records"), indent=2)
     data = create_company_tree(["sector", "industry", "name"], summary, "dividends")
     hierarchical_data = json.dumps(data, indent=2)
     return {"companies_dividend_data": companies_dividends_data,
             "hierarchical_dividend_data": hierarchical_data,
-            "dividend_history": dividend_history}
+            "dividend_history": dividend_history,
+            "dividends": dict_dividends}
 
 
 def create_dividend_history(hist):
