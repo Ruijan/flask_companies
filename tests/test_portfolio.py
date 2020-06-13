@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 
 from src.currency import Currency
-from src.portfolio import Portfolio
+from src.portfolio.portfolio import Portfolio
 
 number_of_month_in_year = 12
 

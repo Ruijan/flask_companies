@@ -1,6 +1,4 @@
 import unittest
-import pandas as pd
-from datetime import datetime
 
 from src.currency import Currency
 
