@@ -2,6 +2,10 @@ function showCompany(ticker) {
     window.location.href = "/screener/" + ticker;
 }
 
+function import_portfolio() {
+    window.location.href = "/import_portfolio";
+}
+
 function show_portfolio(portfolio_name) {
     window.location.href = "/portfolio?name=" + portfolio_name;
 }
@@ -12,6 +16,14 @@ function got_to_portfolio_manager() {
 
 function got_to_screener() {
     window.location.href = "/";
+}
+
+function go_to_login() {
+    window.location.href = "/login";
+}
+
+function go_to_register() {
+    window.location.href = "/register";
 }
 
 
@@ -40,18 +52,109 @@ function disconnect() {
     window.location.href = "/logout";
 }
 
-function fillTransactionFormWithTickers(tickers){
+function fillTransactionFormWithTickers(tickers) {
     let ticker_options = document.getElementById("tickers");
     let names_options = document.getElementById("names");
-    for(const key in tickers){
+    for (const key in tickers) {
         ticker_options.appendChild(createOption(key));
         names_options.appendChild(createOption(tickers[key]));
     }
 }
 
-function createOption(value){
+function fillDividendsHistory(dividends, page, sorted_column = "Date", ascending = true) {
+    let table = document.getElementById("dividend_table");
+    while (table.children.length > 1) {
+        table.removeChild(table.lastChild);
+    }
+    if (!(sorted_column in dividends)) {
+        throw Error(sorted_column + " not in dividend dictionary.");
+    }
+    let length = Object.keys(dividends[sorted_column]).length
+    let indices = new Array(length);
+    for (let i = 0; i < length; ++i) indices[i] = i;
+    if(ascending){
+        indices.sort(function (a, b) {
+            return dividends[sorted_column][a] < dividends[sorted_column][b] ? -1 : dividends[sorted_column][a] > dividends[sorted_column][b] ? 1 : 0;
+        })
+    }
+    else{
+        indices.sort(function (a, b) {
+            return dividends[sorted_column][a] > dividends[sorted_column][b] ? -1 : dividends[sorted_column][a] < dividends[sorted_column][b] ? 1 : 0;
+        })
+    }
+
+    for(let key of Object.keys(dividends)){
+        let temp = new Array(length);
+        for(let i = 0; i < length; ++i){
+            temp[i] = dividends[key][indices[i]];
+        }
+        dividends[key] = temp;
+    }
+
+    let countRow = 0;
+    const maxRows = 10;
+    let current_page = 1;
+    for (const index in dividends["Date"]) {
+        if (countRow > maxRows) {
+            current_page += 1;
+            countRow = 0;
+        }
+        if (current_page === page) {
+            let row = document.createElement('tr');
+            row.appendChild(createColumn(dividends["Tickers"][index]));
+            row.appendChild(createColumn(dividends["Name"][index]));
+            row.appendChild(createColumn(Math.round(dividends["Dividends"][index] * 100) / 100));
+            row.appendChild(createColumn(dividends["Date"][index]));
+            table.appendChild(row);
+        }
+        countRow += 1;
+    }
+    let maxPages = Math.ceil(Object.keys(dividends["Date"]).length / maxRows)
+    document.getElementById("pagination_dividend").innerHTML = "";
+    let ul = document.createElement('ul');
+    ul.classList.add("pagination");
+    ul.classList.add("justify-content-center");
+    for (let i = 1; i < maxPages; i++) {
+        if (i < 5 || maxPages - i < 5) {
+            let li = document.createElement('li');
+            if (i === page) {
+                li.classList.add("active");
+            }
+            li.classList.add("page-item");
+            let link = document.createElement("a");
+            link.innerText = i.toString();
+            link.classList.add("page-link");
+            link.href = "#dividend_table";
+            link.onclick = function () {
+                fillDividendsHistory(dividends, i, sorted_column, ascending)
+            };
+            li.appendChild(link)
+            ul.appendChild(li)
+        } else if (i === 5) {
+            let li = document.createElement('li');
+            li.classList.add("page-item");
+            li.classList.add("disabled");
+            let link = document.createElement("a");
+            link.innerText = "...";
+            link.classList.add("page-link");
+            link.href = "#";
+            li.appendChild(link)
+            ul.appendChild(li)
+        }
+    }
+    document.getElementById("pagination_dividend").appendChild(ul);
+    return !ascending;
+}
+
+function createColumn(value) {
+    let column = document.createElement('td');
+    column.innerText = value;
+    return column
+}
+
+function createOption(value) {
     var opt = document.createElement('option');
-    opt.appendChild( document.createTextNode(value) );
+    opt.appendChild(document.createTextNode(value));
     opt.value = value;
     return opt;
 }
@@ -128,8 +231,17 @@ function openTab(buttonName, tabName) {
     document.getElementById(buttonName).className += " active";
 }
 
+function sortTableFromData(data, tableID) {
+    let table = document.getElementById(tableID);
+    let childCount = 0;
+    while (table.firstChild && length(table.children)) {
+        table.removeChild(table.lastChild);
+        childCount += 1;
+    }
+}
 
-function sortTable(n, element, ignore=1) {
+
+function sortTable(n, element, ignore = 1) {
     var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
     table = document.getElementById(element);
     switching = true;
@@ -150,12 +262,12 @@ function sortTable(n, element, ignore=1) {
             one from current row and one from the next: */
             x = rows[i].getElementsByTagName("TD")[n].innerHTML.toLowerCase();
             x_float = parseFloat(x.replace(/[^\d.-]/g, ''));
-            if(!Number.isNaN(x_float)){
+            if (!Number.isNaN(x_float)) {
                 x = x_float;
             }
             y = rows[i + 1].getElementsByTagName("TD")[n].innerHTML.toLowerCase();
             y_float = parseFloat(y.replace(/[^\d.-]/g, ''));
-            if(!Number.isNaN(x_float)){
+            if (!Number.isNaN(x_float)) {
                 y = y_float;
             }
             /* Check if the two rows should switch place,

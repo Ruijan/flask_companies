@@ -2,7 +2,8 @@ import time
 from datetime import datetime, timedelta
 import yfinance as yf
 
-from src.portfolio import get_currency_ticker
+from src.currency import Currency
+from src.portfolio.portfolio import get_currency_ticker
 
 
 def get_range(end_date, period, start_date):
@@ -124,7 +125,7 @@ class LocalHistoryCache(dict):
         for txn in transactions:
             if txn["ticker"] not in tickers:
                 tickers.append(txn["ticker"])
-            currency_ticker = get_currency_ticker(company_cache[txn["ticker"]]["currency"], currency)
+            currency_ticker = get_currency_ticker(Currency(company_cache[txn["ticker"]]["currency"]), currency)
             if currency_ticker not in tickers:
                 tickers.append(currency_ticker)
         tickers.append("^GSPC")
@@ -138,7 +139,7 @@ class LocalHistoryCache(dict):
         min_date = now
         for txn in transactions:
             date = datetime.strptime(txn["date"], "%Y-%m-%d")
-            currency_ticker = get_currency_ticker(company_cache[txn["ticker"]]["currency"], currency)
+            currency_ticker = get_currency_ticker(Currency(company_cache[txn["ticker"]]["currency"]), currency)
             if currency_ticker not in dates:
                 dates[currency_ticker] = {"start": date, "end": now}
             if date < dates[currency_ticker]["start"]:
