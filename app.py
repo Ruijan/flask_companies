@@ -7,7 +7,7 @@ import ccy
 from flask import Flask, session, render_template, redirect, url_for
 from flask_pymongo import PyMongo, request
 from src.brokers.degiro import Degiro
-from src.cache.companies_cache import CompaniesCache
+from src.cache.companies_cache import CompaniesCache, fetch_company_from_api
 from src.currency import Currency
 from src.displayer.company_displayer import display_company
 from all_functions import print_companies_to_html
@@ -25,6 +25,10 @@ from src.user.user import User
 from src.user.authenticator import AuthenticationException, AuthenticatorFactory
 from src.user.registor import RegistrationException
 from src.user.registor import RegistratorFactory
+from rq import Queue
+from worker import conn
+
+worker_queue = Queue(connection=conn)
 
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]
@@ -85,6 +89,7 @@ def clean_start():
 @app.route('/')
 def explore_companies():
     if is_user_connected():
+        return display_portfolios_manager()
         global pymongo_connected
         html = "Database not connected"
         current_country = request.args.get("country")
@@ -125,6 +130,9 @@ def refresh_staging_prod():
 def show_company(ticker):
     global companies_cache
     db_company = companies_cache.get(ticker)
+    today = datetime.now()
+    if companies_cache.should_update_company(ticker, today):
+        worker_queue.enqueue(fetch_company_from_api, ticker, companies_cache)
     if db_company is not None:
         return display_company(db_company, ticker)
     return "No company found"
@@ -172,11 +180,14 @@ def show_portfolio():
     request_start = time.time()
     portfolio_name = request.args.get("name")
     portfolio = Portfolio.retrieve_from_database(mongo.db.portfolio, session["USER"], portfolio_name)
+    print("Get portfolio --- %s seconds ---" % (time.time() - request_start))
     tab = "Summary"
     if portfolio is None:
         return redirect(url_for("show_portfolio_manager"))
     update_portfolio(portfolio)
+    print("Update portfolio --- %s seconds ---" % (time.time() - request_start))
     context = get_portfolio_context(portfolio, tickers, tab)
+    print("Get plots and graphs --- %s seconds ---" % (time.time() - request_start))
     context["user_id"] = session["USER"]
     print("Total request time --- %s seconds ---" % (time.time() - request_start))
     return render_template("portfolio.html", **context)
@@ -284,6 +295,7 @@ def import_portfolio():
     product_ids = [position["id"] for position in degiro.data["portfolio"]["value"] if position["id"].isdigit()]
     products = degiro.get_products_by_ids(product_ids)
     movements = degiro.get_account_overview("01/01/1970", datetime.now().strftime("%d/%m/%Y"))
+
     print("Degiro total request time --- %s seconds ---" % (time.time() - start_time))
     names = tickers["Name"].tolist()
     names = [str(name).lower() for name in names]
@@ -312,6 +324,7 @@ def import_portfolio():
     mongo.db.portfolio.insert_one(portfolio)
     portfolio = Portfolio.retrieve_from_database(mongo.db.portfolio, session["USER"], "Degiro")
     companies_cache.update_from_transactions(movements)
+
     history_cache.update_from_transactions(movements, companies_cache, portfolio.currency)
     for movement in movements:
         portfolio.add_transaction(movement, history_cache, companies_cache)

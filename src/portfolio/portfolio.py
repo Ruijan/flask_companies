@@ -76,6 +76,7 @@ class Portfolio:
         self.positions = dict()
         self.stats = {"div_rate": 0, "net_div_rate": 0, "cagr1": 0, "cagr3": 0, "cagr5": 0, "payout_ratio": 0,
                       "years_of_growth": 0}
+        self.dividend_transactions = DataFrame()
         for txn in self.transactions:
             company = cache_companies.get(txn["ticker"])
             temp_txn = txn.copy()
@@ -106,7 +107,7 @@ class Portfolio:
             ref_txn_hist = get_reference_history(self.currency, cache, temp_txn)
             ref_hist = add_txn_hist(ref_hist, ref_txn_hist)
             conversion_rate = get_current_conversion_rate(Currency(company["currency"]), self.currency, cache)
-            c_div = company["stats"]["forward_annual_dividend_rate"] * temp_txn["shares"] * conversion_rate
+            c_div = self.get_current_dividend(company, conversion_rate, temp_txn["shares"])
             self.add_txn_to_stats(c_div, company, temp_txn)
             self.add_txn_to_positions(c_div, company, temp_txn, txn_hist, cache)
         if self.transactions:
@@ -143,7 +144,7 @@ class Portfolio:
         ref_txn_hist = get_reference_history(self.currency, cache, temp_txn)
         ref_hist = add_txn_hist(ref_hist, ref_txn_hist)
         conversion_rate = get_current_conversion_rate(Currency(company["currency"]), self.currency, cache)
-        c_div = company["stats"]["forward_annual_dividend_rate"] * temp_txn["shares"] * conversion_rate
+        c_div = self.get_current_dividend(company, conversion_rate, temp_txn["shares"])
         self.add_txn_to_positions(c_div, company, transaction, txn_history, cache)
         if self.transactions:
             hist["S&P500"] = ref_hist["Close"]
@@ -166,7 +167,7 @@ class Portfolio:
         ref_txn_hist = get_reference_history(self.currency, cache, temp_txn)
         ref_hist = remove_txn_hist(ref_hist, ref_txn_hist)
         conversion_rate = get_current_conversion_rate(Currency(company["currency"]), self.currency, cache)
-        c_div = company["stats"]["forward_annual_dividend_rate"] * temp_txn["shares"] * conversion_rate
+        c_div = self.get_current_dividend(company, conversion_rate, temp_txn["shares"])
         self.remove_txn_from_positions(c_div, txn, txn_history)
         hist["S&P500"] = ref_hist["Close"]
         self.history = hist
@@ -184,7 +185,7 @@ class Portfolio:
         for txn in self.transactions:
             company = cache_companies.get(txn["ticker"])
             conversion_rate = get_current_conversion_rate(Currency(company["currency"]), self.currency, cache)
-            c_div = company["stats"]["forward_annual_dividend_rate"] * txn["shares"] * conversion_rate
+            c_div = self.get_current_dividend(company, conversion_rate, txn["shares"])
             self.add_txn_to_stats(c_div, company, txn)
         is_empty = len(self.transactions) == 0
         self.total = self.history["Amount"].values[-1] if not is_empty else 0
@@ -198,6 +199,10 @@ class Portfolio:
         self.stats["cagr5"] = cagr(self.stats["cagr5"], self.stats["div_rate"], 5) if not is_empty else 0
         self.stats["years_of_growth"] = self.stats["years_of_growth"] / self.total if not is_empty else 0
         self.current = self.total + diff_price[-1] if not is_empty else 0
+
+    @staticmethod
+    def get_current_dividend(company, conversion_rate, shares):
+        return company["profile"]["lastDiv"] * shares * conversion_rate
 
     def add_txn_to_stats(self, c_div, company, txn):
         self.stats["div_rate"] += c_div
@@ -272,6 +277,8 @@ def get_reference_history(currency, cache, temp_txn):
     ref_txn["shares"] = 1
     ref_txn_hist = compute_history(cache, currency, ref_txn, Currency("USD"), "USA")
     if len(ref_txn_hist["Close"]) > 0:
+        if ref_txn_hist["Close"].values[0] == 0:
+            print("WHY IS IT ZERO???")
         ref_txn["shares"] = ref_txn["total"] / ref_txn_hist["Close"].values[0]
     else:
         ref_txn["shares"] = 0
@@ -280,27 +287,18 @@ def get_reference_history(currency, cache, temp_txn):
     return ref_txn_hist
 
 
-def get_currency_ticker(currency, target_currency):
-    ticker = currency.short
-    if currency.short != target_currency.short:
-        ticker = currency.short + target_currency.short + '=X'
-        if currency == "USD":
-            ticker = target_currency.short + '=X'
-    return ticker
-
-
 def get_current_conversion_rate(currency, target_currency, cache):
-    ticker = get_currency_ticker(currency, target_currency)
-    if ticker != currency.short:
+    ticker = cache.get_currency_ticker(currency, target_currency)
+    if target_currency.short != currency.short:
         return cache.get_last_day(ticker)["Close"]
     return 1
 
 
 def get_currency_history(currency, target_currency, cache, start_date, end_date):
-    ticker = get_currency_ticker(currency, target_currency)
-    if ticker != currency.short:
-        return cache.get(ticker, start_date, end_date)["Close"]
+    if target_currency.short != currency.short:
+        return cache.get_forex(currency, target_currency, start_date, end_date)["Close"]
     base = datetime.today()
+    base = base.replace(hour=0, minute=0, second=0, microsecond=0)
     date_list = [base - timedelta(days=x) for x in range((end_date - start_date).days + 1)]
     currency_hist = Series(data=[1] * len(date_list), index=date_list)
     return currency_hist

@@ -193,32 +193,33 @@ class Degiro:
                 description = rmov['description'].split('@')
                 words = description[0].split(' ')
                 infos = description[1].split(' ')
-                mov["shares"] = float(words[1])
-                mov["price_COS"] = float(infos[0].replace(',', '.'))
-                mov["price"] = mov["price_COS"]
-                mov["total"] = abs(rmov["change"])
-                c_transactions = [transaction for transaction in transactions if
-                                  "productId" in transaction and transaction["productId"] == rmov['productId'] and
-                                  transaction["date"] == rmov['date']]
-                mov["fees"] = np.sum([abs(transaction['change']) for transaction in c_transactions if
-                                      "frais" in transaction["description"].lower() or "fees" in transaction[
-                                          "description"].lower()])
+                if words[1]. isnumeric():
+                    mov["shares"] = float(words[1])
+                    mov["price_COS"] = float(infos[0].replace(',', '.'))
+                    mov["price"] = mov["price_COS"]
+                    mov["total"] = abs(rmov["change"])
+                    c_transactions = [transaction for transaction in transactions if
+                                      "productId" in transaction and transaction["productId"] == rmov['productId'] and
+                                      transaction["date"] == rmov['date']]
+                    mov["fees"] = np.sum([abs(transaction['change']) for transaction in c_transactions if
+                                          "frais" in transaction["description"].lower() or "fees" in transaction[
+                                              "description"].lower()])
 
-                if rmov['currency'] != "EUR":
-                    total = [transaction['change'] / transaction['exchangeRate'] for transaction in c_transactions if
-                             rmov['currency'] == transaction["currency"] and transaction['type'] != "TRANSACTION"]
-                    mov["price"] = abs(total[0]) / mov["shares"]
-                    mov["total"] = abs(total[0])
-                mov['date'] = date
-                mov['change'] = rmov['change']
-                mov['currency'] = rmov['currency']
-                mov['description'] = rmov['description']
-                mov['type'] = rmov['type']
-                if 'orderId' in rmov:
-                    mov['orderId'] = rmov['orderId']
-                if 'productId' in rmov:
-                    mov['productId'] = rmov['productId']
-                movs.append(mov)
+                    if rmov['currency'] != "EUR":
+                        total = [transaction['change'] / transaction['exchangeRate'] for transaction in c_transactions if
+                                 rmov['currency'] == transaction["currency"] and transaction['type'] != "TRANSACTION"]
+                        mov["price"] = abs(total[0]) / mov["shares"]
+                        mov["total"] = abs(total[0])
+                    mov['date'] = date
+                    mov['change'] = rmov['change']
+                    mov['currency'] = rmov['currency']
+                    mov['description'] = rmov['description']
+                    mov['type'] = rmov['type']
+                    if 'orderId' in rmov:
+                        mov['orderId'] = rmov['orderId']
+                    if 'productId' in rmov:
+                        mov['productId'] = rmov['productId']
+                    movs.append(mov)
         return movs
 
     def get_products_by_ids(self, ids):

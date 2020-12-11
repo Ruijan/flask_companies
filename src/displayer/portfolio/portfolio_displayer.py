@@ -15,7 +15,6 @@ from bokeh.models import HoverTool
 from bokeh.palettes import Accent6, Inferno256
 from bokeh.plotting import figure
 from bokeh.transform import cumsum
-from flask import render_template
 from bokeh.models import GeoJSONDataSource
 import matplotlib.cm
 from bokeh.models import ColorBar, LogColorMapper, LogTicker, LinearColorMapper, BasicTicker
@@ -46,12 +45,15 @@ def get_transaction_table(portfolio):
 
 
 def get_upcoming_dividends(summary, currency):
+    today = datetime.today()
+    today = today.replace(hour=0, minute=0, second=0, microsecond=0)
+
     upcoming_dividends = [{"ticker": key,
                            "amount": format_currency(position["dividends"] / position["dividend_frequency"], currency.short,
                                                      locale='en_US'),
-                           "date": (position["ex_dividend_date"] - datetime.today()).days}
+                           "date": (position["ex_dividend_date"] - today).days}
                           for key, position in summary.items() if
-                          (position["ex_dividend_date"] - datetime.today()).days > 0]
+                          (position["ex_dividend_date"] - today).days >= 0]
     upcoming_dividends = sorted(upcoming_dividends, key=lambda x: x["date"])
     return upcoming_dividends
 
@@ -180,19 +182,23 @@ def get_growth_plot(summary, hist, is_empty):
 
 def get_dividends_plots(summary, hist, dividends, is_empty):
     dividend_history = create_dividend_history(hist)
-    for index in range(len(dividend_history)):
-        dividend_history[index]["date"] = dividend_history[index]["date"].strftime("%B %Y")
+    companies_dividends_data = {}
+    hierarchical_data = {}
     dict_dividends = dividends.reset_index()
-    dict_dividends.sort_values(by=['Date'], inplace=True, ascending=False)
-    dict_dividends["Name"] = [0] * len(dict_dividends["Date"])
-    for index in range(len(dict_dividends["Date"])):
-        dict_dividends["Name"][index] = summary[dict_dividends["Tickers"][index]]["name"]
-        dict_dividends["Date"][index] = dict_dividends["Date"][index].strftime("%Y-%m-%d")
-    dict_dividends = dict_dividends.groupby(["Date", "Name", "Tickers"]).sum().reset_index().to_dict()
-    data = group_by("name", summary, "dividends").sort_values(by="value", ascending=False)
-    companies_dividends_data = json.dumps(data.to_dict("records"), indent=2)
-    data = create_company_tree(["sector", "industry", "name"], summary, "dividends")
-    hierarchical_data = json.dumps(data, indent=2)
+
+    if not is_empty:
+        for index in range(len(dividend_history)):
+            dividend_history[index]["date"] = dividend_history[index]["date"].strftime("%B %Y")
+        dict_dividends.sort_values(by=['Date'], inplace=True, ascending=False)
+        dict_dividends["Name"] = [0] * len(dict_dividends["Date"])
+        for index in range(len(dict_dividends["Date"])):
+            dict_dividends["Name"][index] = summary[dict_dividends["Tickers"][index]]["name"]
+            dict_dividends["Date"][index] = dict_dividends["Date"][index].strftime("%Y-%m-%d")
+        dict_dividends = dict_dividends.groupby(["Date", "Name", "Tickers"]).sum().reset_index().to_dict()
+        data = group_by("name", summary, "dividends").sort_values(by="value", ascending=False)
+        companies_dividends_data = json.dumps(data.to_dict("records"), indent=2)
+        data = create_company_tree(["sector", "industry", "name"], summary, "dividends")
+        hierarchical_data = json.dumps(data, indent=2)
     return {"companies_dividend_data": companies_dividends_data,
             "hierarchical_dividend_data": hierarchical_data,
             "dividend_history": dividend_history,
@@ -205,7 +211,7 @@ def create_dividend_history(hist):
     max_date = datetime(today.year, 12, 1)
     if not hist.empty:
         min_date = min(hist.index)
-        max_date = datetime(today.year, today.month + 6, 1)
+        max_date = datetime(today.year + math.floor((today.month + 6)/12), (today.month + 6)%12, 1)
     history = [({"tax": 0, "date": c_date, "net_amount": 0}) for c_date in
                get_list_of_dates_per_month(min_date, max_date)]
     for index, row in hist.iterrows():

@@ -1,9 +1,12 @@
+import math
+import os
 import time
 from datetime import datetime, timedelta
 import yfinance as yf
-
+from urllib.request import urlopen
+import json
+import pandas as pd
 from src.currency import Currency
-from src.portfolio.portfolio import get_currency_ticker
 
 
 def get_range(end_date, period, start_date):
@@ -20,7 +23,7 @@ def get_range(end_date, period, start_date):
             elif element_of_time == "w":
                 start_date = end_date - timedelta(weeks=amount)
             elif element_of_time == "m":
-                start_date = end_date - timedelta(weeks=4*amount)
+                start_date = end_date - timedelta(weeks=4 * amount)
             elif element_of_time == "y":
                 start_date = end_date - timedelta(weeks=52 * amount)
     return end_date, start_date
@@ -28,6 +31,7 @@ def get_range(end_date, period, start_date):
 
 class LocalHistoryCache(dict):
     __instance = None
+    __source = "grep"
 
     @staticmethod
     def get_instance():
@@ -43,16 +47,41 @@ class LocalHistoryCache(dict):
         else:
             LocalHistoryCache.__instance = self
 
+    def get_currency_ticker(self, currency1, currency2):
+        if self.__source == "grep":
+            return get_currency_ticker_grep(currency1, currency2)
+        return get_currency_ticker_yahoo(currency1, currency2)
+
+    def get_forex(self, currency1, currency2, start_date=None, end_date=None, period="max"):
+        if self.__source == "grep":
+            ticker = get_currency_ticker_grep(currency1, currency2)
+        else:
+            ticker = get_currency_ticker_yahoo(currency1, currency2)
+        return self.get(ticker, start_date, end_date, period)
+
+    def get_market_index_ticker(self, index_name):
+        if self.__source == "grep":
+            return index_name.replace("^", "%5E")
+        return index_name
+
     def get(self, key, start_date=None, end_date=None, period="max"):
         end_date, start_date = get_range(end_date, period, start_date)
         self[key] = self.fetch_history(key, start_date, end_date, period)
         hist = self[key]["history"].copy()
+        hist.index = pd.to_datetime(hist.index)
         mask = (hist.index >= start_date) & (hist.index <= end_date)
         return hist.loc[mask]
 
     def get_last_day(self, key):
         if key not in self:
-            self[key] = {"history": yf.Ticker(key).history(period="1d"),
+            if self.__source != "grep":
+                history = yf.Ticker(key).history(period="1d")
+            else:
+                url = "https://financialmodelingprep.com/api/v3/quote-short/" + key + "?apikey=" + os.environ[
+                    "FINANCE_KEY"]
+                history = get_json_parsed_data(url)
+
+            self[key] = {"history": history,
                          "last_update": datetime.now(),
                          "start_date": datetime.today() - timedelta(days=1),
                          "end_date": datetime.today()}
@@ -76,82 +105,272 @@ class LocalHistoryCache(dict):
             if diff_time.days > 0:
                 added_history = yf.Ticker(key).history(start=start_date,
                                                        end=self[key]["start_date"] - timedelta(days=1))
+                temp_data["history"].index = pd.to_datetime(temp_data["history"].index)
                 temp_data["history"] = temp_data["history"].append(added_history).sort_values(by=["Date"],
                                                                                               ascending=True)
 
                 temp_data["start_date"] = start_date
         temp_data["history"]["Close"] = temp_data["history"]["Close"].fillna(method='ffill').fillna(method='bfill')
         temp_data["history"] = temp_data["history"].loc[~temp_data["history"].index.duplicated(keep='first')]
-        fifteen_minutes = 60 * 15
-        if (datetime.now() - temp_data["last_update"]).seconds > fifteen_minutes:
-            today_hist = yf.Ticker(key).history(period='1d')
-            index = today_hist.index[0]
-            new_data = today_hist.iloc[0]
-            temp_data["history"].loc[index] = new_data
-            temp_data["last_update"] = datetime.now()
-            temp_data["end_date"] = datetime.today()
         return temp_data
 
-    def fetch_multiple_histories(self, keys, start_date=None, end_date=None, period="max"):
+    def fetch_multiple_histories(self, keys, currency_tickers, index_tickers, start_date=None, end_date=None,
+                                 period="max"):
         end_date, start_date = get_range(end_date, period, start_date)
-        keys_to_download = [key for key in keys if key not in self]
-        keys_in_cache = [key for key in keys if key in self]
+        ticker_to_download = [key for key in keys if key not in self]
+        currency_to_download = [key for key in currency_tickers if key not in self]
+        index_to_download = [key for key in index_tickers if key not in self]
+        keys_in_cache = [key for key in keys + currency_tickers + index_tickers if key in self]
         results = {}
-        if len(keys_to_download) > 0:
-            tickers = " ".join(keys_to_download)
-            data = yf.download(tickers, start=start_date, end=end_date, group_by='ticker', auto_adjust=True, actions=True)
+        if len(ticker_to_download + currency_to_download + index_to_download) > 0:
 
-            for key in keys_to_download:
-                if len(keys_to_download) > 1:
-                    temp_data = data[key]
+            if self.__source == "grep":
+                data = self.fetch_history_multiple_ticker_grep(end_date, ticker_to_download, currency_to_download,
+                                                               index_to_download, start_date)
+            else:
+                tickers = " ".join(ticker_to_download + currency_to_download + index_to_download)
+
+                data = yf.download(tickers, start=start_date, end=end_date, group_by='ticker', auto_adjust=True,
+                                   actions=True)
+            data.index.name = "Date"
+            for key in data.columns:
+                if len(ticker_to_download + currency_to_download + index_to_download) > 1:
+                    temp_data = data[key[0]]
                 else:
                     temp_data = data
                 temp_data = temp_data.fillna(method='ffill')
                 temp_data = temp_data.fillna(method='bfill')
                 temp_data = temp_data.loc[~temp_data.index.duplicated(keep='first')]
-                results[key] = {"history": temp_data,
-                                "last_update": datetime.now(),
-                                "start_date": start_date,
-                                "end_date": end_date}
+                results[key[0]] = {"history": temp_data,
+                                   "last_update": datetime.now(),
+                                   "start_date": start_date,
+                                   "end_date": end_date}
         for key in keys_in_cache:
             results[key] = self[key]
         return results
 
+    def fetch_history_multiple_ticker_grep(self, end_date, stock_keys, currency_tickers, index_tickers, start_date):
+        today = datetime.today()
+        today = today.replace(hour=0, minute=0, second=0, microsecond=0)
+        formatted_index_tickers = [stock_key.replace("^", "%5E") for stock_key in index_tickers]
+        start_date_str = start_date.strftime("%Y-%m-%d")
+        end_date_str = end_date.strftime("%Y-%m-%d")
+        # Retrieve currency
+        grep_url = "https://financialmodelingprep.com/api/v3/"
+        suffix_url = "?from=" + start_date_str + "to=" + end_date_str + "&apikey=" + os.environ["FINANCE_KEY"]
+
+        # Retrieve Index market
+        all_indices_div, all_indices_price = self.retrieve_index(end_date, formatted_index_tickers, grep_url,
+                                                                 index_tickers, start_date, suffix_url)
+
+        # Retrieve currencies
+        all_currencies_div, all_currencies_price = self.retrieve_currencies(currency_tickers, end_date, grep_url,
+                                                                            start_date, suffix_url)
+
+        # Retrieve dividends
+        all_dividends = self.extract_dividends(end_date, grep_url, start_date, stock_keys, suffix_url)
+        all_dividends.update(all_currencies_div)
+        all_dividends.update(all_indices_div)
+        data = None
+        # Retrieve price
+        if (end_date - start_date).days > 1:
+            base_url = "%shistorical-price-full/" % grep_url
+            suffix_url = "?serietype=line&from=" + start_date_str + "to=" + end_date_str + "&apikey=" + os.environ[
+                "FINANCE_KEY"]
+            prices = retrieve_data_five_by_five(stock_keys, base_url, suffix_url)
+            list_prices = {prices[index]["symbol"]: index for index in range(len(prices)) if prices[index]}
+
+            all_prices = {}
+            for stock_name in stock_keys:
+                price_history = {(start_date + timedelta(days=x)).strftime("%Y-%m-%d"): math.nan for x in
+                                 range((end_date - start_date).days)}
+                if stock_name in list_prices:
+                    for payment in prices[list_prices[stock_name]]["historical"]:
+                        price_history[payment["date"]] = payment["close"]
+                all_prices[stock_name] = price_history
+            all_prices.update(all_currencies_price)
+            all_prices.update(all_indices_price)
+            for company in all_prices.keys():
+                header = pd.MultiIndex.from_product([[company], ["Close"]], names=['Ticker', 'Parameters'])
+                header2 = pd.MultiIndex.from_product([[company], ["Dividends"]],
+                                                     names=['Ticker', 'Parameters'])
+
+                df = pd.DataFrame(all_prices[company].values(), index=all_prices[company].keys(), columns=header)
+                df2 = pd.DataFrame(all_dividends[company].values(), index=list(all_dividends[company].keys()),
+                                   columns=header2)
+                result = pd.concat([df, df2], axis=1, sort=False)
+                result = result.fillna(method='ffill')
+                result = result.fillna(method='bfill')
+                data = result if data is None else pd.concat([data, result], axis=1, sort=False)
+
+        else:
+            url = grep_url + "quote-short/" + ','.join(stock_keys) + "?apikey=" + os.environ["FINANCE_KEY"]
+            all_prices = get_json_parsed_data(url)
+            url = grep_url + "quote/" + ','.join(formatted_index_tickers) + "?apikey=" + os.environ["FINANCE_KEY"]
+            all_prices += get_json_parsed_data(url)
+            url = grep_url + "fx?apikey=" + os.environ["FINANCE_KEY"]
+            data2 = get_json_parsed_data(url)
+            for fx in data2:
+
+                currencies = fx["ticker"].split("/")
+                try:
+                    first_currency_combi = self.get_currency_ticker(Currency(currencies[0]), Currency(currencies[1]))
+                    second_currency_combi = self.get_currency_ticker(Currency(currencies[1]), Currency(currencies[0]))
+                    if first_currency_combi in currency_tickers:
+                        all_prices += [{"symbol": first_currency_combi, "price": float(fx["ask"])}]
+                    elif second_currency_combi in currency_tickers:
+                        all_prices += [{"symbol": second_currency_combi, "price": 1/float(fx["ask"])}]
+                except AttributeError:
+                    pass
+
+            for company in all_prices:
+                symbol = company["symbol"]
+                header = pd.MultiIndex.from_product([[symbol], ["Close"]], names=['Ticker', 'Parameters'])
+                header2 = pd.MultiIndex.from_product([[symbol], ["Dividends"]], names=['Ticker', 'Parameters'])
+
+                df = pd.DataFrame([company["price"]], index=[today.strftime("%Y-%m-%d")], columns=header)
+                df2 = pd.DataFrame(all_dividends[symbol].values(), index=list(all_dividends[symbol].keys()),
+                                   columns=header2)
+                result = pd.concat([df, df2], axis=1, sort=False)
+                result = result.fillna(method='ffill')
+                result = result.fillna(method='bfill')
+                data = result if data is None else pd.concat([data, result], axis=1, sort=False)
+        return data
+
+    def retrieve_currencies(self, currency_tickers, end_date, grep_url, start_date, suffix_url):
+        base_url = "%shistorical-price-full/forex/" % grep_url
+        currencies = retrieve_data_five_by_five(currency_tickers, base_url, suffix_url)
+        list_currencies = {currencies[index]["symbol"].replace("/", ""): index for index in range(len(currencies)) if
+                           currencies[index]}
+        all_currencies_price = {}
+        all_currencies_div = {}
+        for currency in currency_tickers:
+            currency_history = {(start_date + timedelta(days=x)).strftime("%Y-%m-%d"): math.nan for x in
+                                range((end_date - start_date).days)}
+            currency_div_history = {(start_date + timedelta(days=x)).strftime("%Y-%m-%d"): 0 for x in
+                                    range((end_date - start_date).days)}
+            if currency in list_currencies:
+                for payment in currencies[list_currencies[currency]]["historical"]:
+                    currency_history[payment["date"]] = payment["adjClose"]
+            all_currencies_price[currency] = currency_history
+            all_currencies_div[currency] = currency_div_history
+        return all_currencies_div, all_currencies_price
+
+    def retrieve_index(self, end_date, formatted_index_tickers, grep_url, index_tickers, start_date, suffix_url):
+        base_url = "%shistorical-price-full/" % grep_url
+        indices = retrieve_data_five_by_five(formatted_index_tickers, base_url, suffix_url)
+        list_indices = {indices[index]["symbol"]: index for index in range(len(indices)) if indices[index]}
+        all_indices_price = {}
+        all_indices_div = {}
+        for index in index_tickers:
+            index_history = {(start_date + timedelta(days=x)).strftime("%Y-%m-%d"): math.nan for x in
+                             range((end_date - start_date).days)}
+            index_div_history = {(start_date + timedelta(days=x)).strftime("%Y-%m-%d"): 0 for x in
+                                 range((end_date - start_date).days)}
+            if index in list_indices:
+                for payment in indices[list_indices[index]]["historical"]:
+                    index_history[payment["date"]] = payment["adjClose"]
+            all_indices_price[index] = index_history
+            all_indices_div[index] = index_div_history
+        return all_indices_div, all_indices_price
+
+    def extract_dividends(self, end_date, grep_url, start_date, stock_keys, suffix_url):
+        base_url = "%shistorical-price-full/stock_dividend/" % grep_url
+        dividends = retrieve_data_five_by_five(stock_keys, base_url, suffix_url)
+        list_dividends = {dividends[index]["symbol"]: index for index in range(len(dividends)) if dividends[index]}
+        all_dividends = {}
+        for stock_name in stock_keys:
+            dividends_history = {(start_date + timedelta(days=x)).strftime("%Y-%m-%d"): 0 for x in
+                                 range((end_date - start_date).days)}
+            if stock_name in list_dividends:
+                for payment in dividends[list_dividends[stock_name]]["historical"]:
+                    if payment["recordDate"]:
+                        dividends_history[payment["date"]] = payment["adjDividend"]
+            all_dividends[stock_name] = dividends_history
+        return all_dividends
+
     def update_history(self, key, new_value):
-        self[key] = new_value
+        if key in self:
+            self[key].update(new_value)
+        else:
+            self[key] = new_value
 
     def today_update_from_transactions(self, transactions, company_cache, currency):
         tickers = []
+        currency_tickers = []
+        index_tickers = []
         for txn in transactions:
             if txn["ticker"] not in tickers:
                 tickers.append(txn["ticker"])
-            currency_ticker = get_currency_ticker(Currency(company_cache[txn["ticker"]]["currency"]), currency)
-            if currency_ticker not in tickers:
-                tickers.append(currency_ticker)
-        tickers.append("^GSPC")
-        results = self.fetch_multiple_histories(tickers, period="1d")
-        for ticker in tickers:
+            currency_ticker = self.get_currency_ticker(Currency(company_cache[txn["ticker"]]["currency"]), currency)
+            if currency_ticker not in currency_tickers and len(currency_ticker) > 3:
+                currency_tickers.append(currency_ticker)
+        index_tickers.append("^GSPC")
+        results = self.fetch_multiple_histories(tickers, currency_tickers, index_tickers, period="1d")
+        for ticker in results.keys():
             self.update_history(ticker, results[ticker])
 
     def update_from_transactions(self, transactions, company_cache, currency):
-        dates = {}
+        stock_symbols = {}
+        index_symbols = {}
+        currencies_symbols = {}
         now = datetime.now()
         min_date = now
         for txn in transactions:
             date = datetime.strptime(txn["date"], "%Y-%m-%d")
-            currency_ticker = get_currency_ticker(Currency(company_cache[txn["ticker"]]["currency"]), currency)
-            if currency_ticker not in dates:
-                dates[currency_ticker] = {"start": date, "end": now}
-            if date < dates[currency_ticker]["start"]:
-                dates[currency_ticker]["start"] = date
-            if txn["ticker"] not in dates:
-                dates[txn["ticker"]] = {"start": date, "end": now}
-            if date < dates[txn["ticker"]]["start"]:
-                dates[txn["ticker"]]["start"] = date
+            currency_ticker = self.get_currency_ticker(Currency(company_cache[txn["ticker"]]["currency"]), currency)
+            if currency_ticker:
+                if currency_ticker not in currencies_symbols:
+                    currencies_symbols[currency_ticker] = {"start": date, "end": now}
+                if date < currencies_symbols[currency_ticker]["start"]:
+                    currencies_symbols[currency_ticker]["start"] = date
+            if txn["ticker"] not in stock_symbols:
+                stock_symbols[txn["ticker"]] = {"start": date, "end": now}
+            if date < stock_symbols[txn["ticker"]]["start"]:
+                stock_symbols[txn["ticker"]]["start"] = date
             if date < min_date:
                 min_date = date
-        if len(dates) > 0:
-            dates["^GSPC"] = {"start": min_date, "end": now}
-        results = self.fetch_multiple_histories(dates.keys(), min_date, now)
-        for ticker in dates.keys():
+        if len(stock_symbols) > 0:
+            index_symbols["^GSPC"] = {"start": min_date, "end": now}
+        results = self.fetch_multiple_histories(list(stock_symbols.keys()), list(currencies_symbols.keys()),
+                                                list(index_symbols.keys()), min_date, now)
+        for ticker in list(stock_symbols.keys()) + list(currencies_symbols.keys()) + list(index_symbols.keys()):
             self.update_history(ticker, results[ticker])
+
+
+def get_currency_ticker_yahoo(currency, target_currency):
+    ticker = ""
+    if currency.short != target_currency.short:
+        ticker = currency.short + target_currency.short + '=X'
+        if currency == "USD":
+            ticker = target_currency.short + '=X'
+    return ticker
+
+
+def get_currency_ticker_grep(currency, target_currency):
+    if currency.short != target_currency.short:
+        return currency.short + target_currency.short
+    return ""
+
+
+def get_json_parsed_data(url):
+    response = urlopen(url)
+    data = response.read().decode("utf-8")
+    return json.loads(data)
+
+
+def retrieve_data_five_by_five(tickers, base_url, suffix_url):
+    start_time = time.time()
+
+    data = []
+    for index in range(math.ceil(len(tickers) / 5)):
+        current_keys = tickers[index * 5:((index + 1) * 5 if (index + 1) * 5 < len(tickers) else len(tickers))]
+        url = base_url + ','.join(current_keys) + suffix_url
+        temporary_data = get_json_parsed_data(url)
+
+        data += temporary_data['historicalStockList'] if 'historicalStockList' in temporary_data else [temporary_data]
+    print("Retrieving all data --- %s seconds ---" % (time.time() - start_time))
+    return data
+
+
+
