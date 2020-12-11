@@ -135,10 +135,12 @@ def refresh_staging_prod():
 
 @app.route('/screener/<ticker>')
 def show_company(ticker):
+    print("Displaying company: " + ticker)
     global companies_cache
     db_company = companies_cache.get(ticker)
     today = datetime.now()
     if companies_cache.should_update_company(ticker, today):
+        print("update company: " + ticker)
         worker_queue.enqueue(fetch_company_from_api, ticker, companies_cache)
     if db_company is not None:
         return display_company(db_company, ticker)
