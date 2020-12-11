@@ -89,7 +89,9 @@ def get_dividend_calendar():
     base_url = "https://financialmodelingprep.com/api/v3/stock_dividend_calendar" + "?from=" + \
                today.strftime("%Y-%m-%d") + "&to=" + (today + timedelta(days=90)).strftime("%Y-%m-%d") + \
                "&apikey=" + os.environ["FINANCE_KEY"]
-    return DataFrame.from_dict(fetch_data(base_url)).set_index("symbol")
+    data = fetch_data(base_url)
+    print(data)
+    return DataFrame.from_dict(data).set_index("symbol")
 
 
 def fetch_data(base_url):
