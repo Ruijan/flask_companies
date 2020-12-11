@@ -28,7 +28,7 @@ from src.user.registor import RegistratorFactory
 from rq import Queue
 from worker import conn
 
-worker_queue = Queue(connection=conn)
+#worker_queue = Queue(connection=conn)
 
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]
@@ -132,7 +132,8 @@ def show_company(ticker):
     db_company = companies_cache.get(ticker)
     today = datetime.now()
     if companies_cache.should_update_company(ticker, today):
-        worker_queue.enqueue(fetch_company_from_api, ticker, companies_cache)
+        #worker_queue.enqueue(fetch_company_from_api, ticker, companies_cache)
+        pass
     if db_company is not None:
         return display_company(db_company, ticker)
     return "No company found"
