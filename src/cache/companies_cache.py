@@ -47,7 +47,8 @@ class CompaniesCache(dict):
         return self[key]
 
     def get_calendar(self):
-        print(self.__dividend_calendar.to_string())
+        if self.__dividend_calendar is None:
+            self.__dividend_calendar = get_dividend_calendar()
         return self.__dividend_calendar
 
     def fetch_company(self, key):
@@ -90,7 +91,6 @@ def get_dividend_calendar():
                today.strftime("%Y-%m-%d") + "&to=" + (today + timedelta(days=90)).strftime("%Y-%m-%d") + \
                "&apikey=" + os.environ["FINANCE_KEY"]
     data = fetch_data(base_url)
-    print(data)
     return DataFrame.from_dict(data).set_index("symbol")
 
 
@@ -101,7 +101,7 @@ def fetch_data(base_url):
 
 
 def fetch_company_from_api(key, cache):
-    print(cache)
+    print("Fetch data")
     base_url = "https://financialmodelingprep.com/api/v3/"
     suffix_url = "apikey=" + os.environ["FINANCE_KEY"]
     profile_url = base_url + "profile/" + key + "?period=quarter&limit=400&" + suffix_url
