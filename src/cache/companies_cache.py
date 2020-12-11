@@ -129,5 +129,5 @@ def fetch_company_from_api(key, cache, calendar):
     MONGO_DBNAME = 'staging_finance' if os.environ['FLASK_DEBUG'] else 'finance'
     MONGO_URI = os.environ['MONGO_URI'].strip("'").replace('test', MONGO_DBNAME)
     client = pymongo.MongoClient(MONGO_URI)
-    client.db.cleaned_companies.find_one_and_replace({'ticker': cache[key]["ticker"]}, cache[key])
+    client.staging_finance.cleaned_companies.find_one_and_replace({'ticker': cache[key]["ticker"]}, cache[key])
     print(cache[key]["_id"])
