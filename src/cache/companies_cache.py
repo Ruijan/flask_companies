@@ -46,6 +46,9 @@ class CompaniesCache(dict):
         self.fetch_company(key)
         return self[key]
 
+    def get_calendar(self):
+        return self.__dividend_calendar
+
     def fetch_company(self, key):
         if key not in self:
             today = datetime.now()
@@ -111,8 +114,8 @@ def fetch_company_from_api(key, cache):
                                      if dividend["recordDate"]}
     cache[key]["stats"]["ex-dividend_date"] = ""
     if len(dividends) > 0:
-        is_in_calendar = key in cache.__dividend_calendar.index
-        cache[key]["stats"]["ex-dividend_date"] = cache.__dividend_calendar.loc[key]["date"] if is_in_calendar else \
+        is_in_calendar = key in cache.get_calendar().index
+        cache[key]["stats"]["ex-dividend_date"] = cache.get_calendar().loc[key]["date"] if is_in_calendar else \
             dividends[0]["date"]
         cache[key]["stats"]["ex-dividend_date"] = datetime.strptime(cache[key]["stats"]["ex-dividend_date"], "%Y-%m-%d")
     dividend_features = Series(get_dividend_features(cache[key]["dividend_history"], {},
@@ -121,4 +124,5 @@ def fetch_company_from_api(key, cache):
     cache[key] = {**cache[key], **dividend_features}
     cache[key]["last_checked"] = datetime.now()
     cache[key]["last_update"] = datetime.now()
-    cache.__collection.find_one_and_replace({'_id': cache[key]["_id"]}, cache[key])
+    cache.update_db_company(cache[key])
+    #cache.__collection.find_one_and_replace({'_id': cache[key]["_id"]}, cache[key])

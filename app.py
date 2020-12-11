@@ -142,6 +142,7 @@ def show_company(ticker):
     if companies_cache.should_update_company(ticker, today):
         print("update company: " + ticker)
         worker_queue.enqueue(fetch_company_from_api, ticker, companies_cache)
+        #fetch_company_from_api(ticker, companies_cache)
     if db_company is not None:
         return display_company(db_company, ticker)
     return "No company found"
