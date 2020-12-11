@@ -28,7 +28,8 @@ from src.user.registor import RegistratorFactory
 from rq import Queue
 from worker import conn
 
-#worker_queue = Queue(connection=conn)
+print("Creating Worker")
+worker_queue = Queue(connection=conn)
 print("Creating flask")
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]
@@ -55,6 +56,7 @@ if 'MONGO_URI' in os.environ and not pymongo_connected:
     companies_cache = CompaniesCache(mongo.db.cleaned_companies)
     tickers = pd.DataFrame.from_records(mongo.db.tickers.find())
 print("Setup completed")
+
 
 def login_required(f):
     @wraps(f)

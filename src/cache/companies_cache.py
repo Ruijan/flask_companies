@@ -5,11 +5,11 @@ import os
 import ccy
 import numpy as np
 import pycountry
-from pandas import Series
+from pandas import Series, DataFrame
 from urllib.request import urlopen
 import json
 
-from src.cache.DividendCalendar import DividendCalendar
+from src.cache.dividend_calendar import DividendCalendar
 from src.extractor.dividend_analyzer import get_dividend_features
 from src.extractor.dividend_extractor import compute_dividends
 
@@ -32,7 +32,8 @@ class CompaniesCache(dict):
         else:
             CompaniesCache.__instance = self
             CompaniesCache.__collection = collection
-            CompaniesCache.__dividend_calendar = DividendCalendar(datetime.today(), period=7).fetch_calendar()
+            CompaniesCache.__dividend_calendar = get_dividend_calendar()
+            #CompaniesCache.__dividend_calendar = DividendCalendar(datetime.today(), period=7).fetch_calendar()
             CompaniesCache.__dividend_calendar.sort_index(inplace=True)
 
     def update_db_company(self, company):
@@ -84,7 +85,7 @@ def get_dividend_calendar():
     base_url = "https://financialmodelingprep.com/api/v3/stock_dividend_calendar" + "?from=" + \
                today.strftime("%Y-%m-%d") + "&to=" + (today + timedelta(days=90)).strftime("%Y-%m-%d") + \
                "&apikey=" + os.environ["FINANCE_KEY"]
-    return fetch_data(base_url)
+    return DataFrame.from_dict(fetch_data(base_url)).set_index("symbol")
 
 
 def fetch_data(base_url):

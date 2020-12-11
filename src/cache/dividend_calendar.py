@@ -1,4 +1,7 @@
-import pandas, requests, datetime
+import datetime
+import pandas
+import requests
+
 
 class DividendCalendar:
     calendars = []
