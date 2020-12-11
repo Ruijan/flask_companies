@@ -1,15 +1,12 @@
 import math
 from datetime import datetime, timedelta
 import os
-
 import ccy
 import numpy as np
 import pycountry
 from pandas import Series, DataFrame
 from urllib.request import urlopen
 import json
-
-from src.cache.dividend_calendar import DividendCalendar
 from src.extractor.dividend_analyzer import get_dividend_features
 from src.extractor.dividend_extractor import compute_dividends
 
@@ -33,7 +30,6 @@ class CompaniesCache(dict):
             CompaniesCache.__instance = self
             CompaniesCache.__collection = collection
             CompaniesCache.__dividend_calendar = get_dividend_calendar()
-            #CompaniesCache.__dividend_calendar = DividendCalendar(datetime.today(), period=7).fetch_calendar()
             CompaniesCache.__dividend_calendar.sort_index(inplace=True)
 
     def update_db_company(self, company):
@@ -50,6 +46,9 @@ class CompaniesCache(dict):
         if self.__dividend_calendar is None:
             self.__dividend_calendar = get_dividend_calendar()
         return self.__dividend_calendar
+
+    def get_collection(self):
+        return self.__collection
 
     def fetch_company(self, key):
         if key not in self:
@@ -100,7 +99,7 @@ def fetch_data(base_url):
     return json.loads(data)
 
 
-def fetch_company_from_api(key, cache):
+def fetch_company_from_api(key, cache, collection, calendar):
     print("Fetch data")
     base_url = "https://financialmodelingprep.com/api/v3/"
     suffix_url = "apikey=" + os.environ["FINANCE_KEY"]
@@ -117,9 +116,8 @@ def fetch_company_from_api(key, cache):
                                      if dividend["recordDate"]}
     cache[key]["stats"]["ex-dividend_date"] = ""
     if len(dividends) > 0:
-        is_in_calendar = key in cache.get_calendar().index
-        cache[key]["stats"]["ex-dividend_date"] = cache.get_calendar().loc[key]["date"] if is_in_calendar else \
-            dividends[0]["date"]
+        is_in_calendar = key in calendar.index
+        cache[key]["stats"]["ex-dividend_date"] = calendar.loc[key]["date"] if is_in_calendar else dividends[0]["date"]
         cache[key]["stats"]["ex-dividend_date"] = datetime.strptime(cache[key]["stats"]["ex-dividend_date"], "%Y-%m-%d")
     dividend_features = Series(get_dividend_features(cache[key]["dividend_history"], {},
                                                      cache[key]["stats"]["payoutRatio"],
@@ -127,5 +125,4 @@ def fetch_company_from_api(key, cache):
     cache[key] = {**cache[key], **dividend_features}
     cache[key]["last_checked"] = datetime.now()
     cache[key]["last_update"] = datetime.now()
-    cache.update_db_company(cache[key])
-    #cache.__collection.find_one_and_replace({'_id': cache[key]["_id"]}, cache[key])
+    collection.find_one_and_replace({'_id': cache[key]["_id"]}, cache[key])
