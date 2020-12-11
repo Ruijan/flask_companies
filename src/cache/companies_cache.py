@@ -4,6 +4,7 @@ import os
 import ccy
 import numpy as np
 import pycountry
+import pymongo
 from pandas import Series, DataFrame
 from urllib.request import urlopen
 import json
@@ -99,7 +100,7 @@ def fetch_data(base_url):
     return json.loads(data)
 
 
-def fetch_company_from_api(key, cache, collection, calendar):
+def fetch_company_from_api(key, cache, calendar):
     print("Fetch data")
     base_url = "https://financialmodelingprep.com/api/v3/"
     suffix_url = "apikey=" + os.environ["FINANCE_KEY"]
@@ -125,4 +126,7 @@ def fetch_company_from_api(key, cache, collection, calendar):
     cache[key] = {**cache[key], **dividend_features}
     cache[key]["last_checked"] = datetime.now()
     cache[key]["last_update"] = datetime.now()
-    collection.find_one_and_replace({'_id': cache[key]["_id"]}, cache[key])
+    MONGO_DBNAME = 'staging_finance' if os.environ['FLASK_DEBUG'] else 'finance'
+    MONGO_URI = os.environ['MONGO_URI'].strip("'").replace('test', MONGO_DBNAME)
+    client = pymongo.MongoClient(MONGO_URI)
+    client.db.cleaned_companies.find_one_and_replace({'_id': cache[key]["_id"]}, cache[key])

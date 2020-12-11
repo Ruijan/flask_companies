@@ -1,5 +1,6 @@
 import os
 
+import pymongo
 import redis
 from rq import Worker, Queue, Connection
 
