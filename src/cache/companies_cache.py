@@ -47,6 +47,7 @@ class CompaniesCache(dict):
         return self[key]
 
     def get_calendar(self):
+        print(self.__dividend_calendar.to_string())
         return self.__dividend_calendar
 
     def fetch_company(self, key):
