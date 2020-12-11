@@ -29,14 +29,16 @@ from rq import Queue
 from worker import conn
 
 #worker_queue = Queue(connection=conn)
-
+print("Creating flask")
 app = Flask("Company Explorer")
 app.secret_key = os.environ["MONGO_KEY"]
 pymongo_connected = False
 companies_cache = None
 mongo = None
 tickers = None
+print("Creating Local history cache")
 history_cache = LocalHistoryCache()
+print("Creating currencies")
 currencies = Currencies()
 if 'MONGO_URI' in os.environ and not pymongo_connected:
     environment = os.environ['FLASK_DEBUG']
@@ -44,9 +46,12 @@ if 'MONGO_URI' in os.environ and not pymongo_connected:
     app.config['MONGO_URI'] = os.environ['MONGO_URI'].strip("'").replace('test', app.config['MONGO_DBNAME'])
     app.config["GEOIPIFY_API_KEY"] = os.environ['WHOIS_KEY']
     encryptor = Fernet(bytes(os.environ["MONGO_KEY"], 'utf-8'))
+    print("Creating pymongo")
     mongo = PyMongo(app)
+    print("Creating SimpleGeoIP")
     simple_geoip = SimpleGeoIP(app)
     pymongo_connected = True
+    print("Creating CompaniesCache")
     companies_cache = CompaniesCache(mongo.db.cleaned_companies)
     tickers = pd.DataFrame.from_records(mongo.db.tickers.find())
 
