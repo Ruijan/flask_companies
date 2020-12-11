@@ -101,7 +101,7 @@ def fetch_data(base_url):
 
 
 def fetch_company_from_api(key, cache):
-    print("fetch company")
+    print(cache)
     base_url = "https://financialmodelingprep.com/api/v3/"
     suffix_url = "apikey=" + os.environ["FINANCE_KEY"]
     profile_url = base_url + "profile/" + key + "?period=quarter&limit=400&" + suffix_url
