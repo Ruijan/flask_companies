@@ -141,7 +141,6 @@ def show_company(ticker):
     today = datetime.now()
     if companies_cache.should_update_company(ticker, today):
         print("update company: " + ticker)
-        print(companies_cache.get_calendar())
         #fetch_company_from_api(ticker, companies_cache, companies_cache.get_calendar())
         worker_queue.enqueue(fetch_company_from_api, ticker, companies_cache, companies_cache.get_calendar())
     if db_company is not None:
