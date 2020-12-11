@@ -55,7 +55,7 @@ class CompaniesCache(dict):
 
     def should_update_company(self, key, today):
         #return (today - self[key]["last_update"]).days >= 0 and (today - self[key]["last_checked"]).seconds >= 65
-        return (today - self[key]["last_update"]).days > 1 and (today - self[key]["last_checked"]).seconds >= 300
+        return (today - self[key]["last_update"]).days >= 1 #and (today - self[key]["last_checked"]).seconds >= 300
 
     def update_from_transactions(self, transactions):
         for txn in transactions:
