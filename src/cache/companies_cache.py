@@ -32,7 +32,7 @@ class CompaniesCache(dict):
         else:
             CompaniesCache.__instance = self
             CompaniesCache.__collection = collection
-            #CompaniesCache.__dividend_calendar = DividendCalendar(datetime.today(), period=60).fetch_calendar()
+            CompaniesCache.__dividend_calendar = DividendCalendar(datetime.today(), period=7).fetch_calendar()
             CompaniesCache.__dividend_calendar.sort_index(inplace=True)
 
     def update_db_company(self, company):
