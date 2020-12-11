@@ -130,3 +130,4 @@ def fetch_company_from_api(key, cache, calendar):
     MONGO_URI = os.environ['MONGO_URI'].strip("'").replace('test', MONGO_DBNAME)
     client = pymongo.MongoClient(MONGO_URI)
     client.db.cleaned_companies.find_one_and_replace({'_id': cache[key]["_id"]}, cache[key])
+    print(cache[key]["_id"])
