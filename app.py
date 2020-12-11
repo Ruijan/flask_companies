@@ -54,7 +54,7 @@ if 'MONGO_URI' in os.environ and not pymongo_connected:
     print("Creating CompaniesCache")
     companies_cache = CompaniesCache(mongo.db.cleaned_companies)
     tickers = pd.DataFrame.from_records(mongo.db.tickers.find())
-
+print("Setup completed")
 
 def login_required(f):
     @wraps(f)
@@ -231,6 +231,7 @@ def handle_txn():
 
 @app.route('/login', methods=['GET'])
 def show_login_form():
+    print("login")
     if is_user_connected():
         return redirect(url_for("show_portfolio_manager"))
     data = request.args
