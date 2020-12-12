@@ -2,15 +2,15 @@ from bokeh.embed import components
 from bokeh.models import HoverTool
 from bokeh.plotting import figure
 from flask import render_template
-from src.extractor.dividend_extractor import get_yearly_dividends, get_dividend_features
+from src.extractor.dividend_analyzer import get_yearly_dividends, get_dividend_features
 from datetime import datetime
 
 
 def display_company(db_company, ticker):
     dividends = get_yearly_dividends(db_company["dividend_history"], db_company["stock_splits"])
     dividend_features = get_dividend_features(db_company["dividend_history"], db_company["stock_splits"],
-                                              db_company["stats"]["payout_ratio"],
-                                              db_company["stats"]["forward_annual_dividend_yield"])
+                                              db_company["stats"]["payoutRatio"],
+                                              db_company["stats"]["dividendYield"])
     dividends = {'Date': list(dividends.index), 'Dividends': dividends.values.flatten().tolist()}
     dividends["Date"].reverse()
     dividends["Dividends"].reverse()

@@ -17,7 +17,6 @@ from multiprocessing.pool import ThreadPool
 global pool
 
 
-
 if __name__ == '__main__':
     action = "crawler"
     if action == "crawler":
@@ -54,8 +53,3 @@ if __name__ == '__main__':
         temp_df = pd.DataFrame(list(df["stats"]))
         print("Preprocessing --- %s seconds ---" % (time.time() - start_time))
         print(df.head())
-
-    
-        
-
-    

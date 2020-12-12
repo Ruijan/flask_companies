@@ -46,7 +46,7 @@ class Position(dict):
     def compute_div_frequency(dividend_history):
         div_freq = dict()
         for key, _ in dividend_history.items():
-            year = datetime.strptime(key, "%b %d, %Y").year
+            year = datetime.strptime(key, "%Y-%m-%d").year
             if year not in div_freq:
                 div_freq[year] = 0
             div_freq[year] += 1

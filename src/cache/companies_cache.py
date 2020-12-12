@@ -1,17 +1,21 @@
 import math
-from datetime import datetime
-
+from datetime import datetime, timedelta
+import os
 import ccy
 import numpy as np
 import pycountry
-from pandas import Series
-
+import pymongo
+from pandas import Series, DataFrame
+from urllib.request import urlopen
+import json
+from src.extractor.dividend_analyzer import get_dividend_features
 from src.extractor.dividend_extractor import compute_dividends
 
 
 class CompaniesCache(dict):
     __instance = None
     __collection = None
+    __dividend_calendar = None
 
     @staticmethod
     def get_instance():
@@ -26,8 +30,10 @@ class CompaniesCache(dict):
         else:
             CompaniesCache.__instance = self
             CompaniesCache.__collection = collection
+            CompaniesCache.__dividend_calendar = get_dividend_calendar()
+            CompaniesCache.__dividend_calendar.sort_index(inplace=True)
 
-    def update_company(self, company):
+    def update_db_company(self, company):
         if company["ticker"] in self:
             company["last_checked"] = datetime.now()
             self[company["ticker"]] = company
@@ -37,16 +43,24 @@ class CompaniesCache(dict):
         self.fetch_company(key)
         return self[key]
 
+    def get_calendar(self):
+        if self.__dividend_calendar is None:
+            self.__dividend_calendar = get_dividend_calendar()
+        return self.__dividend_calendar
+
+    def get_collection(self):
+        return self.__collection
+
     def fetch_company(self, key):
         if key not in self:
+            today = datetime.now()
             company = self.__collection.find_one({"ticker": key})
-            company["last_checked"] = datetime.now()
+            company["last_checked"] = today
             self[key] = company
-        elif (datetime.now() - self[key]["last_update"]).days > 1 and (
-                datetime.now() - self[key]["last_checked"]).seconds >= 300:
-            company = self.__collection.find_one({"ticker": key})
-            company["last_checked"] = datetime.now()
-            self[key] = company
+
+    def should_update_company(self, key, today):
+        #return (today - self[key]["last_update"]).days >= 0 and (today - self[key]["last_checked"]).seconds >= 65
+        return (today - self[key]["last_update"]).days >= 1 #and (today - self[key]["last_checked"]).seconds >= 300
 
     def update_from_transactions(self, transactions):
         for txn in transactions:
@@ -60,7 +74,60 @@ class CompaniesCache(dict):
                 div_info = Series(compute_dividends(company))
                 company = {**company, **div_info}
                 should_update = True
+            if company["ticker"] in self.__dividend_calendar.index:
+                company["stats"]["ex-dividend_date"] = datetime.strptime(self.__dividend_calendar.loc[company["ticker"]]["date"],
+                                                                         "%Y-%m-%d")
+                should_update = True
             if should_update:
-                self.update_company(company)
+                self.update_db_company(company)
             company["stats"] = dict(
-                (k.lower().replace(" ", "_"), v) if isinstance(k, str) else (k, v) for k, v in company["stats"].items())
+                (k.replace(" ", "_"), v) if isinstance(k, str) else (k, v) for k, v in company["stats"].items())
+
+
+def get_dividend_calendar():
+    today = datetime.today()
+    today = today.replace(hour=0, minute=0, second=0, microsecond=0)
+    base_url = "https://financialmodelingprep.com/api/v3/stock_dividend_calendar" + "?from=" + \
+               today.strftime("%Y-%m-%d") + "&to=" + (today + timedelta(days=90)).strftime("%Y-%m-%d") + \
+               "&apikey=" + os.environ["FINANCE_KEY"]
+    data = fetch_data(base_url)
+    return DataFrame.from_dict(data).set_index("symbol")
+
+
+def fetch_data(base_url):
+    response = urlopen(base_url)
+    data = response.read().decode("utf-8")
+    return json.loads(data)
+
+
+def fetch_company_from_api(key, cache, calendar):
+    print("Fetch data")
+    base_url = "https://financialmodelingprep.com/api/v3/"
+    suffix_url = "apikey=" + os.environ["FINANCE_KEY"]
+    profile_url = base_url + "profile/" + key + "?period=quarter&limit=400&" + suffix_url
+    finance_url = base_url + "income-statement/" + key + "?period=quarter&limit=400&" + suffix_url
+    dividend_url = base_url + "historical-price-full/stock_dividend/" + key + "?" + suffix_url
+    stats_url = base_url + "key-metrics/" + key + "?limit=1&" + suffix_url
+    cache[key]["profile"] = fetch_data(profile_url)[0]
+    cache[key]["finances"] = fetch_data(finance_url)
+    cache[key]["stats"] = fetch_data(stats_url)[0]
+    dividends = fetch_data(dividend_url)["historical"]
+    cache[key]["dividend_history"] = {dividend["recordDate"]: dividend["adjDividend"]
+                                     for dividend in dividends
+                                     if dividend["recordDate"]}
+    cache[key]["stats"]["ex-dividend_date"] = ""
+    if len(dividends) > 0:
+        is_in_calendar = key in calendar.index
+        cache[key]["stats"]["ex-dividend_date"] = calendar.loc[key]["date"] if is_in_calendar else dividends[0]["date"]
+        cache[key]["stats"]["ex-dividend_date"] = datetime.strptime(cache[key]["stats"]["ex-dividend_date"], "%Y-%m-%d")
+    dividend_features = Series(get_dividend_features(cache[key]["dividend_history"], {},
+                                                     cache[key]["stats"]["payoutRatio"],
+                                                     cache[key]["stats"]["dividendYield"]))
+    cache[key] = {**cache[key], **dividend_features}
+    cache[key]["last_checked"] = datetime.now()
+    cache[key]["last_update"] = datetime.now()
+    MONGO_DBNAME = 'staging_finance' if os.environ['FLASK_DEBUG'] else 'finance'
+    MONGO_URI = os.environ['MONGO_URI'].strip("'").replace('test', MONGO_DBNAME)
+    client = pymongo.MongoClient(MONGO_URI)
+    client.staging_finance.cleaned_companies.find_one_and_replace({'ticker': cache[key]["ticker"]}, cache[key])
+    print(cache[key]["_id"])

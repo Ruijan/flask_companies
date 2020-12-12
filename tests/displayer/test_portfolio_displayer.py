@@ -28,7 +28,7 @@ class PortfolioDisplayerTestCase(unittest.TestCase):
         new_history = create_dividend_history(history)
         self.assertTrue(isinstance(new_history, list))
         self.assertEqual(6 + 1, len(new_history), "Expect number of month to be 7")
-        self.assertEqual([i for i in range(month, month+7)], [v["date"].month for v in new_history])
+        self.assertEqual([(i-1)%12+1 for i in range(month, month+7)], [v["date"].month for v in new_history])
         self.assertEqual(18.5 - 14.5 + 4.5 - 3, new_history[0]["tax"])
         self.assertEqual(14.5 + 3, new_history[0]["net_amount"])
 
