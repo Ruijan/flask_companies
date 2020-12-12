@@ -80,6 +80,11 @@
                 <!-- Tab content -->
                 <div id="Summary" class="tabcontent" style="display: block;">
                     <h1>{{ name | safe}}</h1>
+                    {% if uptodate %}
+                        <div class="last_update_recent">Up-to-date</div>
+                    {% else %}
+                        <div class="last_update_late">Updating</div>
+                    {% endif %}
                     <table class="div_info" >
                         <tr><td><h2>Invested</h2></td><td><h2>Current</h2></td><td><h2> Today</h2></td><td><h2>Total</h2></td></tr>
                         <tr><td><h2>{{ total | safe}}</h2></td><td><h2>{{ current | safe}} </h2></td><td><h2>{{ today_change | safe}}<br>{{ diff_today_current_price | safe }}</h2></td><td><h2>{{ total_change | safe}}<br>{{ diff_current_price | safe }}</h2></td></tr>
