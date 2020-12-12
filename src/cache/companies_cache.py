@@ -52,15 +52,17 @@ class CompaniesCache(dict):
         return self.__collection
 
     def fetch_company(self, key):
-        if key not in self:
-            today = datetime.now()
+        today = datetime.now()
+        if key not in self or self.should_update_company(key, today):
             company = self.__collection.find_one({"ticker": key})
             company["last_checked"] = today
             self[key] = company
 
     def should_update_company(self, key, today):
-        #return (today - self[key]["last_update"]).days >= 0 and (today - self[key]["last_checked"]).seconds >= 65
-        return (today - self[key]["last_update"]).days >= 1 #and (today - self[key]["last_checked"]).seconds >= 300
+        return (today - self[key]["last_update"]).days >= 1 and (today - self[key]["last_checked"]).seconds >= 300
+
+    def should_update_db_company(self, key, today):
+        return (today - self[key]["last_update"]).days >= 1
 
     def update_from_transactions(self, transactions):
         for txn in transactions:
@@ -101,7 +103,7 @@ def fetch_data(base_url):
 
 
 def fetch_company_from_api(key, cache, calendar):
-    print("Fetch data")
+    print("Fetch data for ticker: " + key)
     base_url = "https://financialmodelingprep.com/api/v3/"
     suffix_url = "apikey=" + os.environ["FINANCE_KEY"]
     profile_url = base_url + "profile/" + key + "?period=quarter&limit=400&" + suffix_url
@@ -130,4 +132,3 @@ def fetch_company_from_api(key, cache, calendar):
     MONGO_URI = os.environ['MONGO_URI'].strip("'").replace('test', MONGO_DBNAME)
     client = pymongo.MongoClient(MONGO_URI)
     client.staging_finance.cleaned_companies.find_one_and_replace({'ticker': cache[key]["ticker"]}, cache[key])
-    print(cache[key]["_id"])

@@ -3,7 +3,7 @@ pycountry~=19.8.18
 ccy~=1.1.0
 yfinance~=0.1.54
 babel~=2.8.0
-cryptography~=2.9.2
+cryptography~=3.3.1
 bokeh~=2.0.0
 numpy~=1.19.1
 mpld3

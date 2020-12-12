@@ -4,6 +4,7 @@ from functools import wraps
 import pandas as pd
 import pycountry
 import ccy
+from redis.exceptions import ConnectionError
 from flask import Flask, session, render_template, redirect, url_for
 from flask_pymongo import PyMongo, request
 from src.brokers.degiro import Degiro
@@ -138,14 +139,19 @@ def show_company(ticker):
     print("Displaying company: " + ticker)
     global companies_cache
     db_company = companies_cache.get(ticker)
-    today = datetime.now()
-    if companies_cache.should_update_company(ticker, today):
-        print("update company: " + ticker)
-        #fetch_company_from_api(ticker, companies_cache, companies_cache.get_calendar())
-        worker_queue.enqueue(fetch_company_from_api, ticker, companies_cache, companies_cache.get_calendar())
+    update_company_infos(companies_cache, ticker)
     if db_company is not None:
         return display_company(db_company, ticker)
     return "No company found"
+
+
+def update_company_infos(companies_cache, ticker):
+    today = datetime.now()
+    if companies_cache.should_update_db_company(ticker, today):
+        try:
+            worker_queue.enqueue(fetch_company_from_api, ticker, companies_cache, companies_cache.get_calendar())
+        except ConnectionError:
+            fetch_company_from_api(ticker, companies_cache, companies_cache.get_calendar())
 
 
 @app.route('/portfolios-manager', methods=['GET'])
@@ -195,6 +201,9 @@ def show_portfolio():
     if portfolio is None:
         return redirect(url_for("show_portfolio_manager"))
     update_portfolio(portfolio)
+    if ~portfolio.up_to_date:
+        for ticker in portfolio.positions.keys():
+            update_company_infos(companies_cache, ticker)
     print("Update portfolio --- %s seconds ---" % (time.time() - request_start))
     context = get_portfolio_context(portfolio, tickers, tab)
     print("Get plots and graphs --- %s seconds ---" % (time.time() - request_start))
