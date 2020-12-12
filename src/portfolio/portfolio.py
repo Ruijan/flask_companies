@@ -33,6 +33,7 @@ class Portfolio:
         self.total = total if total is not None else 0
         self.current = current if current is not None else 0
         self.transactions = transactions if total is not None else []
+        self.up_to_date = False
         self.index_transaction = int(
             np.max([txn["id"] for txn in transactions])) if transactions is not None and len(
             transactions) > 0 else 0
@@ -64,8 +65,11 @@ class Portfolio:
                 self.process_portfolio(cache, cache_companies, refresh=True)
             else:
                 self.process_portfolio(cache, cache_companies)
+        self.up_to_date = True
+        for ticker, position in self.positions.items():
+            if ticker in cache_companies and (cache_companies[ticker]["last_update"] - now).days > 1:
+                self.up_to_date = False
         online_portfolio = self.to_dict().copy()
-
         online_portfolio["last_update"] = now
         db_portfolio.find_one_and_replace({"email": self.user, "name": self.name}, online_portfolio)
 

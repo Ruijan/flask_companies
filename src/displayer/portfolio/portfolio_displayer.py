@@ -18,13 +18,14 @@ from bokeh.transform import cumsum
 from bokeh.models import GeoJSONDataSource
 import matplotlib.cm
 from bokeh.models import ColorBar, LogColorMapper, LogTicker, LinearColorMapper, BasicTicker
-
+import time
 
 def get_portfolio_context(portfolio, tickers, tab):
     is_empty = not portfolio.transactions
-
+    request_start = time.time()
     all_tickers = tickers[["Ticker", "Name"]].set_index("Ticker").to_dict()["Name"]
-    context = {"name": portfolio.name, "is_empty": is_empty, "tickers": all_tickers, "tab": tab}
+    context = {"name": portfolio.name, "is_empty": is_empty, "tickers": all_tickers, "tab": tab,
+               "uptodate": portfolio.up_to_date}
     context.update(get_all_price_change(portfolio.history, is_empty, portfolio))
     context.update(get_portfolio_info(portfolio))
     context.update(get_growth_plot(portfolio.positions, portfolio.history, is_empty))
@@ -34,6 +35,7 @@ def get_portfolio_context(portfolio, tickers, tab):
     context["transactions"] = get_transaction_table(portfolio)
     context.update(get_world_maps(portfolio.positions))
     context.update(get_dividends_info(portfolio.history, portfolio.stats, portfolio.currency, is_empty))
+    print("Get portfolio --- %s seconds ---" % (time.time() - request_start))
     return context
 
 
