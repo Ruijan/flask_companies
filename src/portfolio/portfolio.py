@@ -40,6 +40,10 @@ class Portfolio:
         pass
 
     @staticmethod
+    def delete_from_database(database, user_email, name):
+        database.delete_one({"email": user_email, "name": name})
+
+    @staticmethod
     def retrieve_from_database(database, user_email, name):
         portfolio = database.find_one({"email": user_email, "name": name})
         portfolio["history"] = DataFrame.from_dict(portfolio["history"])

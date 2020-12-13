@@ -190,6 +190,22 @@ def display_portfolios_manager():
                            currencies=keys)
 
 
+@app.route('/delete_portfolio', methods=['GET'])
+@login_required
+def delete_portfolio():
+    portfolio_name = request.args.get("name")
+    Portfolio.delete_from_database(mongo.db.portfolio, session["USER"], portfolio_name)
+    return redirect(url_for("show_portfolio_manager"))
+
+
+@app.route('/reload_portfolio', methods=['GET'])
+@login_required
+def reload_portfolio():
+    portfolio_name = request.args.get("name")
+    Portfolio.delete_from_database(mongo.db.portfolio, session["USER"], portfolio_name)
+    return redirect(url_for("import_portfolio"))
+
+
 @app.route('/portfolio', methods=['GET'])
 @login_required
 def show_portfolio():
