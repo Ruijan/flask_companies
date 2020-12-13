@@ -32,10 +32,23 @@
 
             <div id="dividends">
                 {% for portfolio in portfolios %}
-                    <div class="portfolio_button" onclick="show_portfolio('{{ portfolio['name'] }}')">
-                        <h1>{{ portfolio["name"] }}</h1>
-                        Total {{ portfolio["total"] }}<br>
-                            Current {{ portfolio["current"] }}
+                    <div class="portfolio_button" >
+                        <div class="dropdown">
+                            <button type='button' class="dropbtn">
+                                <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.iconsdb.com%2Ficons%2Fpreview%2Fwhite%2Fgear-2-xxl.png&f=1&nofb=1" width="20px"/>
+                            </button>
+                            <div class="dropdown-content">
+                                <a href="#" onclick="force_update_portfolio('{{ portfolio['name'] }}')">Force update</a>
+                                <a href="#" onclick="reload_portfolio('{{ portfolio['name'] }}')">Reload</a>
+                                <a href="#" style="background-color: darkred;" onclick="delete_portfolio('{{ portfolio['name'] }}')">Delete</a>
+                            </div>
+                        </div>
+                        <div onclick="show_portfolio('{{ portfolio['name'] }}')">
+                            <h2>{{ portfolio["name"] }}</h2>
+                            Total {{ portfolio["total"] }}<br>
+                                Current {{ portfolio["current"] }}
+                        </div>
+
                     </div>
                 {% endfor %}
                 <div class="portfolio_add_button" onclick="go_to_portfolio_form()">
@@ -84,5 +97,17 @@
 var should_show = {{ is_portfolio | safe }};
 if (!should_show){
     document.getElementById("add_portfolio_form").style.display = "block";
+}
+
+function delete_portfolio(name) {
+  window.location.href = '/delete_portfolio?name='+name;
+}
+
+function force_update_portfolio(name) {
+  window.location.href = '/update_portfolio?name='+name;
+}
+
+function reload_portfolio(name) {
+  window.location.href = '/reload_portfolio?name='+name;
 }
 </script>
