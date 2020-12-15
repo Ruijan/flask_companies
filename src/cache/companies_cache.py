@@ -102,7 +102,7 @@ def fetch_data(base_url):
     return json.loads(data)
 
 
-def fetch_company_from_api(key, cache, calendar):
+def fetch_company_from_api(key, company, dividend_date):
     print("Fetch data for ticker: " + key)
     base_url = "https://financialmodelingprep.com/api/v3/"
     suffix_url = "apikey=" + os.environ["FINANCE_KEY"]
@@ -110,25 +110,24 @@ def fetch_company_from_api(key, cache, calendar):
     finance_url = base_url + "income-statement/" + key + "?period=quarter&limit=400&" + suffix_url
     dividend_url = base_url + "historical-price-full/stock_dividend/" + key + "?" + suffix_url
     stats_url = base_url + "key-metrics/" + key + "?limit=1&" + suffix_url
-    cache[key]["profile"] = fetch_data(profile_url)[0]
-    cache[key]["finances"] = fetch_data(finance_url)
-    cache[key]["stats"] = fetch_data(stats_url)[0]
+    company["profile"] = fetch_data(profile_url)[0]
+    company["finances"] = fetch_data(finance_url)
+    company["stats"] = fetch_data(stats_url)[0]
     dividends = fetch_data(dividend_url)["historical"]
-    cache[key]["dividend_history"] = {dividend["recordDate"]: dividend["adjDividend"]
+    company["dividend_history"] = {dividend["recordDate"]: dividend["adjDividend"]
                                      for dividend in dividends
                                      if dividend["recordDate"]}
-    cache[key]["stats"]["ex-dividend_date"] = ""
+    company["stats"]["ex-dividend_date"] = ""
     if len(dividends) > 0:
-        is_in_calendar = key in calendar.index
-        cache[key]["stats"]["ex-dividend_date"] = calendar.loc[key]["date"] if is_in_calendar else dividends[0]["date"]
-        cache[key]["stats"]["ex-dividend_date"] = datetime.strptime(cache[key]["stats"]["ex-dividend_date"], "%Y-%m-%d")
-    dividend_features = Series(get_dividend_features(cache[key]["dividend_history"], {},
-                                                     cache[key]["stats"]["payoutRatio"],
-                                                     cache[key]["stats"]["dividendYield"]))
-    cache[key] = {**cache[key], **dividend_features}
-    cache[key]["last_checked"] = datetime.now()
-    cache[key]["last_update"] = datetime.now()
-    MONGO_DBNAME = 'staging_finance' if os.environ['FLASK_DEBUG'] else 'finance'
-    MONGO_URI = os.environ['MONGO_URI'].strip("'").replace('test', MONGO_DBNAME)
-    client = pymongo.MongoClient(MONGO_URI)
-    client.staging_finance.cleaned_companies.find_one_and_replace({'ticker': cache[key]["ticker"]}, cache[key])
+        company["stats"]["ex-dividend_date"] = dividend_date if dividend_date is not None else dividends[0]["date"]
+        company["stats"]["ex-dividend_date"] = datetime.strptime(company["stats"]["ex-dividend_date"], "%Y-%m-%d")
+    dividend_features = Series(get_dividend_features(company["dividend_history"], {},
+                                                     company["stats"]["payoutRatio"],
+                                                     company["stats"]["dividendYield"]))
+    company = {**company, **dividend_features}
+    company["last_checked"] = datetime.now()
+    company["last_update"] = datetime.now()
+    mongo_dbname = 'staging_finance' if os.environ['FLASK_DEBUG'] else 'finance'
+    mongo_uri = os.environ['mongo_uri'].strip("'").replace('test', mongo_dbname)
+    client = pymongo.MongoClient(mongo_uri)
+    client.staging_finance.cleaned_companies.find_one_and_replace({'ticker': company["ticker"]}, company)
