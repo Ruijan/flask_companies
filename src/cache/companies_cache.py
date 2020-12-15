@@ -5,6 +5,7 @@ import ccy
 import numpy as np
 import pycountry
 import pymongo
+import fmpsdk
 from pandas import Series, DataFrame
 from urllib.request import urlopen
 import json
@@ -91,10 +92,8 @@ class CompaniesCache(dict):
 def get_dividend_calendar():
     today = datetime.today()
     today = today.replace(hour=0, minute=0, second=0, microsecond=0)
-    base_url = "https://financialmodelingprep.com/api/v3/stock_dividend_calendar" + "?from=" + \
-               today.strftime("%Y-%m-%d") + "&to=" + (today + timedelta(days=90)).strftime("%Y-%m-%d") + \
-               "&apikey=" + os.environ["FINANCE_KEY"]
-    data = fetch_data(base_url)
+    data = fmpsdk.dividend_calendar(apikey=os.environ["FINANCE_KEY"], from_date=today.strftime("%Y-%m-%d"),
+                                    to_date=(today + timedelta(days=90)).strftime("%Y-%m-%d"))
     return DataFrame.from_dict(data).set_index("symbol")
 
 
@@ -105,17 +104,11 @@ def fetch_data(base_url):
 
 
 def fetch_company_from_api(key, company, dividend_date):
-    print("Fetch data for ticker: " + key)
-    base_url = "https://financialmodelingprep.com/api/v3/"
-    suffix_url = "apikey=" + os.environ["FINANCE_KEY"]
-    profile_url = base_url + "profile/" + key + "?period=quarter&limit=400&" + suffix_url
-    finance_url = base_url + "income-statement/" + key + "?period=quarter&limit=400&" + suffix_url
-    dividend_url = base_url + "historical-price-full/stock_dividend/" + key + "?" + suffix_url
-    stats_url = base_url + "key-metrics/" + key + "?limit=1&" + suffix_url
-    company["profile"] = fetch_data(profile_url)[0]
-    company["finances"] = fetch_data(finance_url)
-    company["stats"] = fetch_data(stats_url)[0]
-    dividends = fetch_data(dividend_url)["historical"]
+    api_key = os.environ["FINANCE_KEY"]
+    company["profile"] = fmpsdk.company_profile(apikey=api_key, symbol=key)
+    company["finances"] = fmpsdk.income_statement(apikey=api_key, symbol=key, period="quarter")
+    company["stats"] = fmpsdk.key_metrics_ttm(apikey=api_key, symbol=key)
+    dividends = fmpsdk.historical_stock_dividend(apikey=api_key, symbol=key)["historical"]
     company["dividend_history"] = {dividend["recordDate"]: dividend["adjDividend"] for dividend in dividends
                                    if dividend["recordDate"]}
     company["stats"]["ex-dividend_date"] = ""
