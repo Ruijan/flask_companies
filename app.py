@@ -149,7 +149,7 @@ def update_company_infos(companies_cache, ticker):
     today = datetime.now()
     if companies_cache.should_update_db_company(ticker, today):
         dividend_calendar = companies_cache.get_calendar()
-        is_in_calendar = ticker in dividend_calendar.get_calendar().index
+        is_in_calendar = ticker in dividend_calendar.index
         dividend_date = dividend_calendar.loc[ticker]["date"] if is_in_calendar else None
         try:
             worker_queue.enqueue(fetch_company_from_api, ticker, companies_cache[ticker], dividend_date)
