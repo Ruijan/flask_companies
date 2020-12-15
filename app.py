@@ -151,6 +151,11 @@ def update_company_infos(companies_cache, ticker):
         dividend_calendar = companies_cache.get_calendar()
         is_in_calendar = ticker in dividend_calendar.index
         dividend_date = dividend_calendar.loc[ticker]["date"] if is_in_calendar else None
+        company = companies_cache.copy()
+        company["finances"] = []
+        company["stats"] = []
+        company["dividend_history"] = []
+        company["profile"] = []
         try:
             worker_queue.enqueue(fetch_company_from_api, ticker, companies_cache[ticker], dividend_date)
         except ConnectionError:
