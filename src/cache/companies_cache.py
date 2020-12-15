@@ -68,7 +68,8 @@ class CompaniesCache(dict):
         for txn in transactions:
             company = self.get(txn["ticker"])
             should_update = False
-            if "currency" not in company or (not isinstance(company["currency"], str) and math.isnan(company["currency"])):
+            if "currency" not in company or (
+                    not isinstance(company["currency"], str) and math.isnan(company["currency"])):
                 country = company["country"] if company["country"] != "USA" else "United States"
                 company["currency"] = ccy.countryccy(pycountry.countries.get(name=country).alpha_2.lower())
                 should_update = True
@@ -77,8 +78,9 @@ class CompaniesCache(dict):
                 company = {**company, **div_info}
                 should_update = True
             if company["ticker"] in self.__dividend_calendar.index:
-                company["stats"]["ex-dividend_date"] = datetime.strptime(self.__dividend_calendar.loc[company["ticker"]]["date"],
-                                                                         "%Y-%m-%d")
+                company["stats"]["ex-dividend_date"] = datetime.strptime(
+                    self.__dividend_calendar.loc[company["ticker"]]["date"],
+                    "%Y-%m-%d")
                 should_update = True
             if should_update:
                 self.update_db_company(company)
@@ -114,9 +116,8 @@ def fetch_company_from_api(key, company, dividend_date):
     company["finances"] = fetch_data(finance_url)
     company["stats"] = fetch_data(stats_url)[0]
     dividends = fetch_data(dividend_url)["historical"]
-    company["dividend_history"] = {dividend["recordDate"]: dividend["adjDividend"]
-                                     for dividend in dividends
-                                     if dividend["recordDate"]}
+    company["dividend_history"] = {dividend["recordDate"]: dividend["adjDividend"] for dividend in dividends
+                                   if dividend["recordDate"]}
     company["stats"]["ex-dividend_date"] = ""
     if len(dividends) > 0:
         company["stats"]["ex-dividend_date"] = dividend_date if dividend_date is not None else dividends[0]["date"]
