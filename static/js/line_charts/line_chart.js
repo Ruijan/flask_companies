@@ -1,13 +1,14 @@
 class LineChart {
     constructor(container_name, data, margin = ({top: 30, right: 50, bottom: 30, left: 50})) {
-        this.dates = this.getUniqueDates(data)
-        this.root = this.transformData(data)
+        this.dates = this.getUniqueDates(data["data"])
+        this.root = this.transformData(data["data"])
         this.c_name = container_name
         this.margin = margin
         this.container = d3.select(container_name)
         this.width = this.container.node().getBoundingClientRect().width - this.margin.right;
         this.height = this.getHeight()
         this.container.style("height", (this.height + this.margin.bottom + this.margin.top) + "px");
+        this.reference = data["reference"]
         this.buildSVG()
         this.tooltip = d3.select(this.c_name)
             .append("div")
@@ -56,8 +57,9 @@ class LineChart {
                 }
             });
         };
-        let reference = this.root.find(el => el.key == "Invested");
-        var filtered = this.root.filter(function(value, index, arr){ return value.key !== "Invested";});
+        let reference = this.root.find(el => el.key == this.reference);
+        let reference_name = this.reference;
+        var filtered = this.root.filter(function(value, index, arr){ return value.key !== reference_name;});
         svg.append("path")
             .datum(reference.values)
             .attr("fill", "steelblue")
@@ -85,7 +87,20 @@ class LineChart {
                 const i0 = i1 - 1;
                 const i = xm - dates[i0] > dates[i1] - xm ? i1 : i0;
                 const date = xm.getFullYear() + "-" + (xm.getMonth()+ 1).pad(2) + "-" + xm.getDate().pad(2)
-                const i_value = chart.dates.indexOf(date)
+                let i_value = -1;
+                let previous_date = -1;
+                for(let index = 0; index < chart.dates.length; ++index){
+                    let c_date = new Date(chart.dates[index])
+                    if(index === 0){
+                        previous_date = c_date;
+                    }
+
+                    if(xm > c_date && xm < previous_date){
+                        i_value = index;
+                    }
+                    previous_date = c_date;
+                }
+                //const i_value = chart.dates.indexOf(date)
                 d3.select(this).attr('stroke-width', 3)
                 svg.selectAll('#limit').remove()
                 const pos_y = y(actual.values[i_value].value)
@@ -127,7 +142,7 @@ class LineChart {
             .call(d3.axisBottom(x).ticks(this.width / 80).tickSizeOuter(0))
         let yAxis = g => g
             .attr("transform", `translate(${this.margin.left},0)`)
-            .call(d3.axisLeft(y))
+            .call(d3.axisLeft(y).ticks(this.height / 80, "s").tickFormat(function(d){return d3.format(".2s")(d).replace(/G/, "B")}))
             .call(g => g.select(".domain").remove())
             .call(g => g.select(".tick:last-of-type text").clone()
                 .attr("x", 3)

@@ -519,9 +519,9 @@ def get_portfolio_history(hist):
         ratio_close = ratio_close.values.flatten().tolist()
         ratio_sp500 = ratio_sp500.values.flatten().tolist()
     dates = [dates[index].strftime("%Y-%m-%d") for index in range(len(dates))]
-    data = [{"key": "Close", "values": [{"date": dates[index], "value": close_price[index]} for index in range(len(amount))]},
+    data = {"data": [{"key": "Close", "values": [{"date": dates[index], "value": close_price[index]} for index in range(len(amount))]},
             {"key": "SP500", "values": [{"date": dates[index], "value": sp500[index]} for index in range(len(amount))]},
-            {"key": "Invested", "values": [{"date": dates[index], "value": amount[index]} for index in range(len(amount))]}]
+            {"key": "Invested", "values": [{"date": dates[index], "value": amount[index]} for index in range(len(amount))]}], "reference": "Invested"}
     data_ratio = [{"Close": [{"date": dates[index], "value": ratio_close[index]} for index in range(len(amount))]},
                   {"SP500": [{"date": dates[index], "value": ratio_sp500[index]} for index in range(len(amount))]}]
     return data, data_ratio

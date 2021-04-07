@@ -79,14 +79,15 @@ def get_cagr(yearly_dividends, years):
 def rate_dividends(data):
     score = 0
     max_score = 8
-    payout_ratio = 0 if isinstance(data["payout_ratio"], str) else data["payout_ratio"]
-    cagr = [data["cagr_1"], data["cagr_3"], data["cagr_5"], data["cagr_10"]]
-    score += 2 if data["div_yield"] > 0.05 else 2 * data["div_yield"] / 0.05
-    score += 1 if np.std(cagr) < abs(0.2 * np.mean(cagr)) else np.std(cagr) / 0.2 * abs(np.mean(cagr))
-    score += 0.33 if data["cagr_1"] > 0.03 else 0.33 * data["cagr_1"] / 0.03
-    score += 0.33 if data["cagr_3"] > 0.03 else 0.33 * data["cagr_3"] / 0.03
-    score += 0.33 if data["cagr_5"] > 0.03 else 0.33 * data["cagr_5"] / 0.03
-    score += 2 if data["continuous_dividend_growth"] > 16 else 2 * data["continuous_dividend_growth"] / 16
-    score += 0 if payout_ratio > 1 else 2 * (1 - payout_ratio)
+    if data["div_yield"] is not None:
+        payout_ratio = 0 if isinstance(data["payout_ratio"], str) else data["payout_ratio"]
+        cagr = [data["cagr_1"], data["cagr_3"], data["cagr_5"], data["cagr_10"]]
+        score += 2 if data["div_yield"] > 0.05 else 2 * data["div_yield"] / 0.05
+        score += 1 if np.std(cagr) < abs(0.2 * np.mean(cagr)) else np.std(cagr) / 0.2 * abs(np.mean(cagr))
+        score += 0.33 if data["cagr_1"] > 0.03 else 0.33 * data["cagr_1"] / 0.03
+        score += 0.33 if data["cagr_3"] > 0.03 else 0.33 * data["cagr_3"] / 0.03
+        score += 0.33 if data["cagr_5"] > 0.03 else 0.33 * data["cagr_5"] / 0.03
+        score += 2 if data["continuous_dividend_growth"] > 16 else 2 * data["continuous_dividend_growth"] / 16
+        score += 0 if payout_ratio > 1 else 2 * (1 - payout_ratio)
 
     return score / max_score

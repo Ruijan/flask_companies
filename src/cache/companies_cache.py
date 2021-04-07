@@ -56,11 +56,17 @@ class CompaniesCache(dict):
         today = datetime.now()
         if key not in self or self.should_update_company(key, today):
             company = self.__collection.find_one({"ticker": key})
-            company["last_checked"] = today
+            if company is None:
+                company = dict()
+                fetch_company_from_api(key, company, None)
+
             self[key] = company
+            if self.should_update_db_company(key, today):
+                fetch_company_from_api(key, company, None)
+                company["last_checked"] = today
 
     def should_update_company(self, key, today):
-        return (today - self[key]["last_update"]).days >= 1 and (today - self[key]["last_checked"]).seconds >= 300
+        return (today - self[key]["last_update"]).days >= 1 and (today - self[key]["last_checked"]).seconds >= 60
 
     def should_update_db_company(self, key, today):
         return (today - self[key]["last_update"]).days >= 1
@@ -104,13 +110,19 @@ def fetch_data(base_url):
 
 
 def fetch_company_from_api(key, company, dividend_date):
+    print("Key: " + key)
     api_key = os.environ["FINANCE_KEY"]
-    company["profile"] = fmpsdk.company_profile(apikey=api_key, symbol=key)
-    company["finances"] = fmpsdk.income_statement(apikey=api_key, symbol=key, period="quarter")
-    company["stats"] = fmpsdk.key_metrics_ttm(apikey=api_key, symbol=key)
-    dividends = fmpsdk.historical_stock_dividend(apikey=api_key, symbol=key)["historical"]
-    company["dividend_history"] = {dividend["recordDate"]: dividend["adjDividend"] for dividend in dividends
-                                   if dividend["recordDate"]}
+    company["profile"] = fmpsdk.company_profile(apikey=api_key, symbol=key)[0]
+    company["finances"] = fmpsdk.income_statement(apikey=api_key, symbol=key, period="quarter", limit=100)
+    company["stats"] = fmpsdk.key_metrics(apikey=api_key, symbol=key, limit=1)[0]
+    company["balance_sheet"] = fmpsdk.balance_sheet_statement(apikey=api_key, symbol=key, period="quarter", limit=100)
+    dividends = fmpsdk.historical_stock_dividend(apikey=api_key, symbol=key)
+    if "historical" in dividends:
+        dividends = dividends["historical"]
+        company["dividend_history"] = {dividend["recordDate"]: dividend["adjDividend"] for dividend in dividends
+                                       if dividend["recordDate"]}
+    else:
+        company["dividend_history"] = []
     company["stats"]["ex-dividend_date"] = ""
     if len(dividends) > 0:
         company["stats"]["ex-dividend_date"] = dividend_date if dividend_date is not None else dividends[0]["date"]
