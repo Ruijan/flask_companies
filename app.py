@@ -4,7 +4,7 @@ from functools import wraps
 import pandas as pd
 import pycountry
 import ccy
-from redis.exceptions import ConnectionError
+from redis import exceptions
 from flask import Flask, session, render_template, redirect, url_for
 from flask_pymongo import PyMongo, request
 from src.brokers.degiro import Degiro
@@ -158,7 +158,7 @@ def update_company_infos(companies_cache, ticker):
         company["profile"] = []
         try:
             worker_queue.enqueue(fetch_company_from_api, ticker, companies_cache[ticker], dividend_date)
-        except ConnectionError:
+        except exceptions.ConnectionError:
             fetch_company_from_api(ticker, companies_cache[ticker], dividend_date)
 
 

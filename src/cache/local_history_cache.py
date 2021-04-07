@@ -3,10 +3,15 @@ import os
 import time
 from datetime import datetime, timedelta
 import yfinance as yf
+import fmpsdk
 from urllib.request import urlopen
 import json
 import pandas as pd
 from src.currency import Currency
+
+Y_M_D = "%Y-%m-%d"
+
+FINANCE_KEY_ = os.environ["FINANCE_KEY"]
 
 
 def get_range(end_date, period, start_date):
@@ -27,6 +32,22 @@ def get_range(end_date, period, start_date):
             elif element_of_time == "y":
                 start_date = end_date - timedelta(weeks=52 * amount)
     return end_date, start_date
+
+
+def rearrange_data_in_dictionnary(data, tickers, end_date, list_tickers, start_date):
+    all_prices = {}
+    all_dividends = {}
+    for ticker in tickers:
+        currency_history = {(start_date + timedelta(days=x)).strftime(Y_M_D): math.nan for x in
+                            range((end_date - start_date).days)}
+        currency_div_history = {(start_date + timedelta(days=x)).strftime(Y_M_D): 0 for x in
+                                range((end_date - start_date).days)}
+        if ticker in list_tickers:
+            for payment in data[list_tickers[ticker]]["historical"]:
+                currency_history[payment["date"]] = payment["adjClose"]
+        all_prices[ticker] = currency_history
+        all_dividends[ticker] = currency_div_history
+    return all_dividends, all_prices
 
 
 class LocalHistoryCache(dict):
@@ -77,9 +98,7 @@ class LocalHistoryCache(dict):
             if self.__source != "grep":
                 history = yf.Ticker(key).history(period="1d")
             else:
-                url = "https://financialmodelingprep.com/api/v3/quote-short/" + key + "?apikey=" + os.environ[
-                    "FINANCE_KEY"]
-                history = get_json_parsed_data(url)
+                history = fmpsdk.quote_short(apikey=os.environ["FINANCE_KEY"], symbol=key)
 
             self[key] = {"history": history,
                          "last_update": datetime.now(),
@@ -92,7 +111,7 @@ class LocalHistoryCache(dict):
     def fetch_history(self, key, start_date=None, end_date=None, period="max"):
         end_date, start_date = get_range(end_date, period, start_date)
         temp_data = None
-        if key not in self:
+        if key not in self.keys():
             start = time.time()
             temp_data = {"history": yf.Ticker(key).history(start=start_date, end=end_date),
                          "last_update": datetime.now(),
@@ -153,36 +172,29 @@ class LocalHistoryCache(dict):
         today = datetime.today()
         today = today.replace(hour=0, minute=0, second=0, microsecond=0)
         formatted_index_tickers = [stock_key.replace("^", "%5E") for stock_key in index_tickers]
-        start_date_str = start_date.strftime("%Y-%m-%d")
-        end_date_str = end_date.strftime("%Y-%m-%d")
-        # Retrieve currency
-        grep_url = "https://financialmodelingprep.com/api/v3/"
-        suffix_url = "?from=" + start_date_str + "to=" + end_date_str + "&apikey=" + os.environ["FINANCE_KEY"]
 
         # Retrieve Index market
-        all_indices_div, all_indices_price = self.retrieve_index(end_date, formatted_index_tickers, grep_url,
-                                                                 index_tickers, start_date, suffix_url)
+        all_indices_div, all_indices_price = self.retrieve_index(end_date, formatted_index_tickers, index_tickers,
+                                                                 start_date)
 
         # Retrieve currencies
-        all_currencies_div, all_currencies_price = self.retrieve_currencies(currency_tickers, end_date, grep_url,
-                                                                            start_date, suffix_url)
+        all_currencies_div, all_currencies_price = self.retrieve_currencies(currency_tickers, end_date, start_date)
 
         # Retrieve dividends
-        all_dividends = self.extract_dividends(end_date, grep_url, start_date, stock_keys, suffix_url)
+        all_dividends = self.extract_dividends(end_date, start_date, stock_keys)
         all_dividends.update(all_currencies_div)
         all_dividends.update(all_indices_div)
         data = None
         # Retrieve price
         if (end_date - start_date).days > 1:
-            base_url = "%shistorical-price-full/" % grep_url
-            suffix_url = "?serietype=line&from=" + start_date_str + "to=" + end_date_str + "&apikey=" + os.environ[
-                "FINANCE_KEY"]
-            prices = retrieve_data_five_by_five(stock_keys, base_url, suffix_url)
+            prices = retrieve_data_five_by_five(stock_keys, fmpsdk.historical_price_full, series_type="line",
+                                                from_date=start_date.strftime(Y_M_D),
+                                                to_date=end_date.strftime(Y_M_D))
             list_prices = {prices[index]["symbol"]: index for index in range(len(prices)) if prices[index]}
 
             all_prices = {}
             for stock_name in stock_keys:
-                price_history = {(start_date + timedelta(days=x)).strftime("%Y-%m-%d"): math.nan for x in
+                price_history = {(start_date + timedelta(days=x)).strftime(Y_M_D): math.nan for x in
                                  range((end_date - start_date).days)}
                 if stock_name in list_prices:
                     for payment in prices[list_prices[stock_name]]["historical"]:
@@ -204,12 +216,9 @@ class LocalHistoryCache(dict):
                 data = result if data is None else pd.concat([data, result], axis=1, sort=False)
 
         else:
-            url = grep_url + "quote-short/" + ','.join(stock_keys) + "?apikey=" + os.environ["FINANCE_KEY"]
-            all_prices = get_json_parsed_data(url)
-            url = grep_url + "quote/" + ','.join(formatted_index_tickers) + "?apikey=" + os.environ["FINANCE_KEY"]
-            all_prices += get_json_parsed_data(url)
-            url = grep_url + "fx?apikey=" + os.environ["FINANCE_KEY"]
-            data2 = get_json_parsed_data(url)
+            all_prices = fmpsdk.quote_short(apikey=FINANCE_KEY_, symbol=','.join(stock_keys))
+            all_prices += fmpsdk.quote_short(apikey=FINANCE_KEY_, symbol=','.join(formatted_index_tickers))
+            data2 = fmpsdk.forex(apikey=FINANCE_KEY_)
             for fx in data2:
 
                 currencies = fx["ticker"].split("/")
@@ -228,7 +237,7 @@ class LocalHistoryCache(dict):
                 header = pd.MultiIndex.from_product([[symbol], ["Close"]], names=['Ticker', 'Parameters'])
                 header2 = pd.MultiIndex.from_product([[symbol], ["Dividends"]], names=['Ticker', 'Parameters'])
 
-                df = pd.DataFrame([company["price"]], index=[today.strftime("%Y-%m-%d")], columns=header)
+                df = pd.DataFrame([company["price"]], index=[today.strftime(Y_M_D)], columns=header)
                 df2 = pd.DataFrame(all_dividends[symbol].values(), index=list(all_dividends[symbol].keys()),
                                    columns=header2)
                 result = pd.concat([df, df2], axis=1, sort=False)
@@ -237,50 +246,32 @@ class LocalHistoryCache(dict):
                 data = result if data is None else pd.concat([data, result], axis=1, sort=False)
         return data
 
-    def retrieve_currencies(self, currency_tickers, end_date, grep_url, start_date, suffix_url):
-        base_url = "%shistorical-price-full/forex/" % grep_url
-        currencies = retrieve_data_five_by_five(currency_tickers, base_url, suffix_url)
+    def retrieve_currencies(self, currency_tickers, end_date, start_date):
+        currencies = retrieve_data_five_by_five(currency_tickers, fmpsdk.historical_price_full,
+                                                from_date=start_date.strftime(Y_M_D), to_date=end_date.strftime(Y_M_D))
         list_currencies = {currencies[index]["symbol"].replace("/", ""): index for index in range(len(currencies)) if
                            currencies[index]}
-        all_currencies_price = {}
-        all_currencies_div = {}
-        for currency in currency_tickers:
-            currency_history = {(start_date + timedelta(days=x)).strftime("%Y-%m-%d"): math.nan for x in
-                                range((end_date - start_date).days)}
-            currency_div_history = {(start_date + timedelta(days=x)).strftime("%Y-%m-%d"): 0 for x in
-                                    range((end_date - start_date).days)}
-            if currency in list_currencies:
-                for payment in currencies[list_currencies[currency]]["historical"]:
-                    currency_history[payment["date"]] = payment["adjClose"]
-            all_currencies_price[currency] = currency_history
-            all_currencies_div[currency] = currency_div_history
+        all_currencies_div, all_currencies_price = rearrange_data_in_dictionnary(currencies, currency_tickers,
+                                                                                      end_date, list_currencies,
+                                                                                      start_date)
         return all_currencies_div, all_currencies_price
 
-    def retrieve_index(self, end_date, formatted_index_tickers, grep_url, index_tickers, start_date, suffix_url):
-        base_url = "%shistorical-price-full/" % grep_url
-        indices = retrieve_data_five_by_five(formatted_index_tickers, base_url, suffix_url)
+    def retrieve_index(self, end_date, formatted_index_tickers, index_tickers, start_date):
+        indices = retrieve_data_five_by_five(formatted_index_tickers, fmpsdk.historical_price_full,
+                                             from_date=start_date.strftime(Y_M_D), to_date=end_date.strftime(Y_M_D))
+        if not isinstance(indices, list):
+            indices = [indices]
         list_indices = {indices[index]["symbol"]: index for index in range(len(indices)) if indices[index]}
-        all_indices_price = {}
-        all_indices_div = {}
-        for index in index_tickers:
-            index_history = {(start_date + timedelta(days=x)).strftime("%Y-%m-%d"): math.nan for x in
-                             range((end_date - start_date).days)}
-            index_div_history = {(start_date + timedelta(days=x)).strftime("%Y-%m-%d"): 0 for x in
-                                 range((end_date - start_date).days)}
-            if index in list_indices:
-                for payment in indices[list_indices[index]]["historical"]:
-                    index_history[payment["date"]] = payment["adjClose"]
-            all_indices_price[index] = index_history
-            all_indices_div[index] = index_div_history
+        all_indices_div, all_indices_price = rearrange_data_in_dictionnary(indices, index_tickers, end_date,
+                                                                                list_indices, start_date)
         return all_indices_div, all_indices_price
 
-    def extract_dividends(self, end_date, grep_url, start_date, stock_keys, suffix_url):
-        base_url = "%shistorical-price-full/stock_dividend/" % grep_url
-        dividends = retrieve_data_five_by_five(stock_keys, base_url, suffix_url)
+    def extract_dividends(self, end_date, start_date, stock_keys):
+        dividends = retrieve_data_five_by_five(stock_keys, fmpsdk.historical_stock_dividend)
         list_dividends = {dividends[index]["symbol"]: index for index in range(len(dividends)) if dividends[index]}
         all_dividends = {}
         for stock_name in stock_keys:
-            dividends_history = {(start_date + timedelta(days=x)).strftime("%Y-%m-%d"): 0 for x in
+            dividends_history = {(start_date + timedelta(days=x)).strftime(Y_M_D): 0 for x in
                                  range((end_date - start_date).days)}
             if stock_name in list_dividends:
                 for payment in dividends[list_dividends[stock_name]]["historical"]:
@@ -317,7 +308,7 @@ class LocalHistoryCache(dict):
         now = datetime.now()
         min_date = now
         for txn in transactions:
-            date = datetime.strptime(txn["date"], "%Y-%m-%d")
+            date = datetime.strptime(txn["date"], Y_M_D)
             currency_ticker = self.get_currency_ticker(Currency(company_cache[txn["ticker"]]["currency"]), currency)
             if currency_ticker:
                 if currency_ticker not in currencies_symbols:
@@ -359,15 +350,12 @@ def get_json_parsed_data(url):
     return json.loads(data)
 
 
-def retrieve_data_five_by_five(tickers, base_url, suffix_url):
+def retrieve_data_five_by_five(tickers, method, **args):
     start_time = time.time()
-
     data = []
     for index in range(math.ceil(len(tickers) / 5)):
         current_keys = tickers[index * 5:((index + 1) * 5 if (index + 1) * 5 < len(tickers) else len(tickers))]
-        url = base_url + ','.join(current_keys) + suffix_url
-        temporary_data = get_json_parsed_data(url)
-
+        temporary_data = method(apikey=os.environ["FINANCE_KEY"], symbol=','.join(current_keys), **args)
         data += temporary_data['historicalStockList'] if 'historicalStockList' in temporary_data else [temporary_data]
     print("Retrieving all data --- %s seconds ---" % (time.time() - start_time))
     return data

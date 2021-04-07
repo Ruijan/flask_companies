@@ -210,7 +210,7 @@ class Portfolio:
 
     @staticmethod
     def get_current_dividend(company, conversion_rate, shares):
-        return company["profile"]["lastDiv"] * shares * conversion_rate
+        return company["profile"]["lastDiv"] * shares * conversion_rate if "profile" in company else 0
 
     def add_txn_to_stats(self, c_div, company, txn):
         self.stats["div_rate"] += c_div
