@@ -59,11 +59,8 @@ class CompaniesCache(dict):
             if company is None:
                 company = dict()
                 fetch_company_from_api(key, company, None)
-
+            company["last_checked"] = today
             self[key] = company
-            if self.should_update_db_company(key, today):
-                fetch_company_from_api(key, company, None)
-                company["last_checked"] = today
 
     def should_update_company(self, key, today):
         return (today - self[key]["last_update"]).days >= 1 and (today - self[key]["last_checked"]).seconds >= 60
