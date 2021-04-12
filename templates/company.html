@@ -89,8 +89,12 @@
     var request = new Request('/screener-api/{{ ticker|safe }}');
     var data = [];
     let tabcontent = document.getElementsByClassName("tabcontent");
-    for (i = 0; i < tabcontent.length; i++) {
+    for (let i = 0; i < tabcontent.length; i++) {
         tabcontent[i].style.display = "none";
+    }
+    let tabbuttons = document.getElementsByClassName("tablinks");
+    for (let i = 0; i < tabbuttons.length; i++) {
+        tabbuttons[i].disabled = true;
     }
     fetch(request).then(function(response) {
         return response.text();
@@ -109,12 +113,7 @@
         document.getElementById("sector_jinja").innerText = data["sector"]
         document.getElementById("description_jinja").innerText = data["description"]
         document.getElementsByClassName("loader")[0].style.display = "none";
-        if(document.getElementById("Finances").style.display === "block"){
-            onOpenFinances();
-        }
-        if(document.getElementById("Dividends").style.display === "block"){
-            onOpenDividends();
-        }
+        openTab('summary_button', 'Summary');
         var last_update = new Date(data["last_update"]);
         var today = new Date();
         var mil_to_days = 24*60*60*1000;
@@ -127,6 +126,10 @@
             style_date = "last_update_passed";
         }
         document.getElementById("last_update_jinja").className = style_date;
+        let tabbuttons = document.getElementsByClassName("tablinks");
+        for (let i = 0; i < tabbuttons.length; i++) {
+            tabbuttons[i].disabled = false;
+        }
     });
     openTab('summary_button', 'Summary');
     function onOpenDividends(){

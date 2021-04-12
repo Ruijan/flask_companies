@@ -161,7 +161,7 @@ def show_company(ticker):
     global companies_cache
     db_company = companies_cache.get(ticker)
     if db_company is not None:
-        return render_template("index.html", ticker=ticker)
+        return render_template("company.html", ticker=ticker)
     return "No company found"
 
 
@@ -180,6 +180,7 @@ def update_company_infos(companies_cache, ticker):
             worker_queue.enqueue(fetch_company_from_api, ticker, companies_cache[ticker], dividend_date)
         except exceptions.ConnectionError:
             fetch_company_from_api(ticker, companies_cache[ticker], dividend_date)
+            companies_cache.get(ticker)
 
 
 @app.route('/portfolios-manager', methods=['GET'])

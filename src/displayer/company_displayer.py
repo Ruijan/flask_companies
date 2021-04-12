@@ -12,7 +12,7 @@ def display_company(db_company, ticker):
     revenues_data = json.dumps(company_data["financial_data"]["revenue"], indent=2)
     earnings_data = json.dumps(company_data["financial_data"]["netIncome"], indent=2)
     debt_data = json.dumps(company_data["balance_sheet_data"], indent=2)
-    return render_template("index.html",
+    return render_template("company.html",
                            name=company_data["name"],
                            ticker=company_data["ticker"],
                            sector=company_data["sector"],
