@@ -7,35 +7,51 @@ from datetime import datetime
 import json
 
 def display_company(db_company, ticker):
-    financial_data = get_yearly_hierarchical_data(db_company["finances"], ["revenue", "netIncome"],'sum')
-    assets = {"values": [{"date": statement["date"], "value": statement["totalStockholdersEquity"]} for statement in db_company["balance_sheet"]], "key": "Equity"}
-    debt = {"values": [{"date": statement["date"], "value": statement["totalDebt"]} for statement in db_company["balance_sheet"]], "key": "Debt"}
-
-    balance_sheet_data = {"data": [assets, debt], "reference": "Equity"}
-    revenues_data = json.dumps(financial_data["revenue"], indent=2)
-    earnings_data = json.dumps(financial_data["netIncome"], indent=2)
-    debt_data = json.dumps(balance_sheet_data, indent=2)
-    dividend_features = get_dividend_features(db_company["dividend_history"], db_company["stock_splits"],
-                                              db_company["stats"]["payoutRatio"],
-                                              db_company["stats"]["dividendYield"])
-    dividends = {'Date': list(db_company["dividend_history"].keys()), 'Dividends': list(db_company["dividend_history"].values())}
-    dividends = [{"date": dividends["Date"][index], "dividend": dividends["Dividends"][index]} for index in range(len(dividends["Dividends"]))]
-    dividends_data = get_yearly_hierarchical_data(dividends, ["dividend"], 'sum', unique=False)
-    dividends_data = json.dumps(dividends_data["dividend"], indent=2)
-    features = {feature: "{:20,.2f}%".format(dividend_features[feature] * 100) for feature in ["div_yield", "cagr_1", "cagr_3", "cagr_5", "payout_ratio"]}
-    features["continuous_dividend_growth"] = str(dividend_features["continuous_dividend_growth"])
-    features["div_score"] = "{:20,.0f}".format(dividend_features["div_score"] * 100)
-    return render_template("index.html",
-                           name=db_company["name"],
-                           ticker=ticker,
-                           sector=db_company["sector"],
-                           description=db_company["profile"]["description"],
+    company_data = get_company_data(db_company, ticker)
+    dividends_data = json.dumps(company_data["dividends_data"]["dividend"], indent=2)
+    revenues_data = json.dumps(company_data["financial_data"]["revenue"], indent=2)
+    earnings_data = json.dumps(company_data["financial_data"]["netIncome"], indent=2)
+    debt_data = json.dumps(company_data["balance_sheet_data"], indent=2)
+    return render_template("company.html",
+                           name=company_data["name"],
+                           ticker=company_data["ticker"],
+                           sector=company_data["sector"],
+                           description=company_data["description"],
                            hierarchical_dividends_data=dividends_data,
                            hierarchical_revenues_data=revenues_data,
                            hierarchical_earnings_data=earnings_data,
                            hierarchical_debt_data=debt_data,
-                           dividend_features=features,
-                           last_update=datetime.strftime(db_company["last_update"], "%Y-%m-%d"))
+                           dividend_features=company_data["dividend_features"],
+                           last_update=company_data["last_update"])
+
+
+def get_company_data(db_company, ticker):
+    assets = {"values": [{"date": statement["date"], "value": statement["totalStockholdersEquity"]} for statement in
+                         db_company["balance_sheet"]], "key": "Equity"}
+    debt = {"values": [{"date": statement["date"], "value": statement["totalDebt"]} for statement in
+                       db_company["balance_sheet"]], "key": "Debt"}
+    dividend_features = get_dividend_features(db_company["dividend_history"], db_company["stock_splits"],
+                                              db_company["stats"]["payoutRatio"],
+                                              db_company["stats"]["dividendYield"])
+    dividends = {'Date': list(db_company["dividend_history"].keys()),
+                 'Dividends': list(db_company["dividend_history"].values())}
+    dividends = [{"date": dividends["Date"][index], "dividend": dividends["Dividends"][index]} for index in
+                 range(len(dividends["Dividends"]))]
+    features = {feature: "{:20,.2f}%".format(dividend_features[feature] * 100) for feature in
+                         ["div_yield", "cagr_1", "cagr_3", "cagr_5", "payout_ratio"]}
+    features["continuous_dividend_growth"] = str(dividend_features["continuous_dividend_growth"])
+    features["div_score"] = "{:20,.0f}".format(dividend_features["div_score"] * 100)
+    company_data = {"name": db_company["name"],
+                    "ticker": ticker,
+                    "sector": db_company["sector"],
+                    "description": db_company["profile"]["description"],
+                    "financial_data": get_yearly_hierarchical_data(db_company["finances"], ["revenue", "netIncome"],
+                                                                   'sum'),
+                    "balance_sheet_data": {"data": [assets, debt], "reference": "Equity"},
+                    "dividends_data": get_yearly_hierarchical_data(dividends, ["dividend"], 'sum', unique=False),
+                    "dividend_features": features,
+                    "last_update": datetime.strftime(db_company["last_update"], "%Y-%m-%d")}
+    return company_data
 
 
 def get_yearly_hierarchical_data(data, variables, aggregation_method="sum", unique=True):

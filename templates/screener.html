@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/main.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/screener.css') }}">
+    <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
+    <meta charset="UTF-8">
+    <title>Screener</title>
+    <link rel="stylesheet" type="text/css" href="../static/styles/main.css">
+    <link rel="stylesheet" type="text/css" href="../static/styles/screener.css">
+    <script type="text/javascript" src="../static/js/main.js"></script>
+    <script>
+        var tickers = {{ tickers | safe }};
+
+    </script>
+</head>
+
+<body>
+    <div style="overflow:auto;">
+        <div class="main_content">
+            <div>
+                <h1>Screener</h1>
+            </div>
+        </div>
+        <p>
+            <span class="input">
+                <input type="text" placeholder="Enter company name or ticker: MSFT" onkeyup=" suggestCompanies(event, tickers);" id="ticker_input" list="tickers">
+                <button class="screen_valid" onclick="startSearch();"><strong>SEARCH</strong></button>
+                <span></span>
+
+            </span>
+            <datalist id="tickers">
+                <option value="MSFT">Microsoft
+                <option value="AAPL">Apple
+                <option value="IBM">Innovative Business Machine
+                <option value="T">AT&T
+            </datalist>
+        </p>
+    </div>
+</body>
+
+</html>
+
+<script>
+    function startSearch(){
+        document.location.pathname = '/screener/' + document.getElementById("ticker_input").value;
+    }
+    function suggestCompanies(event, tickers) {
+        if (event.keyCode === 13) {
+            startSearch();
+        } else if(event.keyCode > 40 || event.keyCode < 9) { // don't take into account arrow keys and random values that are not important
+            let str=''; // variable to store the options
+            let ticker_value = document.getElementById("ticker_input").value;
+            for (var i = 0; i < tickers["Tickers"].length; i++) {
+                if (tickers["Tickers"][i].startsWith(ticker_value)) {
+                    str += '<option value="'+tickers["Tickers"][i]+'" >' + tickers["Name"][i] + "</option>"; // Storing options in variable
+                }
+            }
+            let my_list=document.getElementById("tickers");
+            my_list.innerHTML = str;
+        }
+    }
+
+</script>

@@ -10,7 +10,7 @@ from flask_pymongo import PyMongo, request
 from src.brokers.degiro import Degiro
 from src.cache.companies_cache import CompaniesCache, fetch_company_from_api
 from src.currency import Currency
-from src.displayer.company_displayer import display_company
+from src.displayer.company_displayer import display_company, get_company_data
 from all_functions import print_companies_to_html
 from cryptography.fernet import Fernet
 from datetime import datetime
@@ -28,6 +28,7 @@ from src.user.registor import RegistrationException
 from src.user.registor import RegistratorFactory
 from rq import Queue
 from worker import conn
+import json
 
 print("Creating Worker")
 worker_queue = Queue(connection=conn)
@@ -134,14 +135,33 @@ def refresh_staging_prod():
                 mongo.db.client.staging_finance[collection].insert_many(documents[index:len(documents)])
 
 
-@app.route('/screener/<ticker>')
-def show_company(ticker):
-    print("Displaying company: " + ticker)
+@app.route('/screener')
+def show_screener():
+    tickers_data = {"Tickers": tickers["Ticker"].values.tolist(), "Name": tickers["Name"].values.tolist()}
+    tickers_data = json.dumps(tickers_data, indent=2)
+    return render_template("screener.html", tickers=tickers_data)
+
+
+@app.route('/screener-api/<ticker>')
+def fetch_company_data(ticker):
+    if ticker == "":
+        redirect(url_for("show_screener"))
     global companies_cache
     db_company = companies_cache.get(ticker)
     update_company_infos(companies_cache, ticker)
+    data = get_company_data(db_company, ticker)
+    return json.dumps(data, indent=2)
+
+
+@app.route('/screener/<ticker>')
+def show_company(ticker):
+    if ticker == "":
+        redirect(url_for("show_screener"))
+    print("Displaying company: " + ticker)
+    global companies_cache
+    db_company = companies_cache.get(ticker)
     if db_company is not None:
-        return display_company(db_company, ticker)
+        return render_template("company.html", ticker=ticker)
     return "No company found"
 
 
@@ -160,6 +180,7 @@ def update_company_infos(companies_cache, ticker):
             worker_queue.enqueue(fetch_company_from_api, ticker, companies_cache[ticker], dividend_date)
         except exceptions.ConnectionError:
             fetch_company_from_api(ticker, companies_cache[ticker], dividend_date)
+            companies_cache.get(ticker)
 
 
 @app.route('/portfolios-manager', methods=['GET'])

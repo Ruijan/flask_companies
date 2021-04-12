@@ -6,14 +6,16 @@ import pandas as pd
 
 def get_dividend_features(dividends, stock_splits, payout_ratio, current_yield):
     data = {"cagr_1": 0, "cagr_3": 0, "cagr_5": 0, "cagr_10": 0, "continuous_dividend_growth": 0,
-            "payout_ratio": payout_ratio, "div_yield": current_yield if current_yield != 'N/A' else 0, "div_score": 0}
-    yearly_dividends = get_yearly_dividends(dividends, stock_splits)
-    data["cagr_1"] = get_cagr(yearly_dividends, 1)
-    data["cagr_3"] = get_cagr(yearly_dividends, 3)
-    data["cagr_5"] = get_cagr(yearly_dividends, 5)
-    data["cagr_10"] = get_cagr(yearly_dividends, 10)
-    data["continuous_dividend_growth"] = get_continuous_dividend_payment(yearly_dividends)
-    data["div_score"] = rate_dividends(data)
+            "payout_ratio": payout_ratio, "div_yield": 0, "div_score": 0}
+    if len(dividends) != 0:
+        yearly_dividends = get_yearly_dividends(dividends, stock_splits)
+        data["div_yield"] = current_yield
+        data["cagr_1"] = get_cagr(yearly_dividends, 1)
+        data["cagr_3"] = get_cagr(yearly_dividends, 3)
+        data["cagr_5"] = get_cagr(yearly_dividends, 5)
+        data["cagr_10"] = get_cagr(yearly_dividends, 10)
+        data["continuous_dividend_growth"] = get_continuous_dividend_payment(yearly_dividends)
+        data["div_score"] = rate_dividends(data)
     return data
 
 
@@ -82,12 +84,12 @@ def rate_dividends(data):
     if data["div_yield"] is not None:
         payout_ratio = 0 if isinstance(data["payout_ratio"], str) else data["payout_ratio"]
         cagr = [data["cagr_1"], data["cagr_3"], data["cagr_5"], data["cagr_10"]]
-        score += 2 if data["div_yield"] > 0.05 else 2 * data["div_yield"] / 0.05
+        score += 2 if data["div_yield"] > 0.05 else max(0, 2 * data["div_yield"] / 0.05)
         score += 1 if np.std(cagr) < abs(0.2 * np.mean(cagr)) else np.std(cagr) / 0.2 * abs(np.mean(cagr))
-        score += 0.33 if data["cagr_1"] > 0.03 else 0.33 * data["cagr_1"] / 0.03
-        score += 0.33 if data["cagr_3"] > 0.03 else 0.33 * data["cagr_3"] / 0.03
-        score += 0.33 if data["cagr_5"] > 0.03 else 0.33 * data["cagr_5"] / 0.03
+        score += 0.33 if data["cagr_1"] > 0.03 else 0.33 * max(0, data["cagr_1"]) / 0.03
+        score += 0.33 if data["cagr_3"] > 0.03 else 0.33 * max(0, data["cagr_3"]) / 0.03
+        score += 0.33 if data["cagr_5"] > 0.03 else 0.33 * max(0, data["cagr_5"]) / 0.03
         score += 2 if data["continuous_dividend_growth"] > 16 else 2 * data["continuous_dividend_growth"] / 16
-        score += 0 if payout_ratio > 1 else 2 * (1 - payout_ratio)
+        score += 2 * (1 - payout_ratio) if 1 > payout_ratio > 0 else 0
 
     return score / max_score

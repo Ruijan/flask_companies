@@ -58,12 +58,10 @@ class CompaniesCache(dict):
             company = self.__collection.find_one({"ticker": key})
             if company is None:
                 company = dict()
-                fetch_company_from_api(key, company, None)
+                company["last_update"] = today - timedelta(360)
+            company["last_checked"] = today
 
             self[key] = company
-            if self.should_update_db_company(key, today):
-                fetch_company_from_api(key, company, None)
-                company["last_checked"] = today
 
     def should_update_company(self, key, today):
         return (today - self[key]["last_update"]).days >= 1 and (today - self[key]["last_checked"]).seconds >= 60
@@ -112,7 +110,13 @@ def fetch_data(base_url):
 def fetch_company_from_api(key, company, dividend_date):
     print("Key: " + key)
     api_key = os.environ["FINANCE_KEY"]
-    company["profile"] = fmpsdk.company_profile(apikey=api_key, symbol=key)[0]
+    is_new_company = "ticker" not in company
+    if "profile" not in company:
+        company["profile"] = fmpsdk.company_profile(apikey=api_key, symbol=key)[0]
+        company["ticker"] = company["profile"]["symbol"]
+        company["ticker_text"] = company["profile"]["symbol"]
+        company["name"] = company["profile"]["companyName"]
+        company["sector"] = company["profile"]["sector"]
     company["finances"] = fmpsdk.income_statement(apikey=api_key, symbol=key, period="quarter", limit=100)
     company["stats"] = fmpsdk.key_metrics(apikey=api_key, symbol=key, limit=1)[0]
     company["balance_sheet"] = fmpsdk.balance_sheet_statement(apikey=api_key, symbol=key, period="quarter", limit=100)
@@ -122,7 +126,8 @@ def fetch_company_from_api(key, company, dividend_date):
         company["dividend_history"] = {dividend["recordDate"]: dividend["adjDividend"] for dividend in dividends
                                        if dividend["recordDate"]}
     else:
-        company["dividend_history"] = []
+        company["dividend_history"] = {}
+    company["stock_splits"] = {}
     company["stats"]["ex-dividend_date"] = ""
     if len(dividends) > 0:
         company["stats"]["ex-dividend_date"] = dividend_date if dividend_date is not None else dividends[0]["date"]
@@ -136,4 +141,7 @@ def fetch_company_from_api(key, company, dividend_date):
     mongo_dbname = 'staging_finance' if os.environ['FLASK_DEBUG'] else 'finance'
     mongo_uri = os.environ['mongo_uri'].strip("'").replace('test', mongo_dbname)
     client = pymongo.MongoClient(mongo_uri)
-    client.staging_finance.cleaned_companies.find_one_and_replace({'ticker': company["ticker"]}, company)
+    if is_new_company:
+        client.staging_finance.cleaned_companies.insert_one(company)
+    else:
+        client.staging_finance.cleaned_companies.find_one_and_replace({'ticker': company["ticker"]}, company)

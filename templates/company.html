@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/main.css') }}">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/main.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/bar_chart.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/vertical_bar_chart.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/diverging_hierarchical_bar_chart.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/bar_charts/diverging_hierarchical_horizontal_bar_chart.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='js/line_charts/line_chart.js') }}"></script>
+    <!-- TO BE REMOVED/> -->
+    <script type="text/javascript" src="../static/js/main.js"></script>
+    <link rel="stylesheet" type="text/css" href="../static/styles/main.css">
+</head>
+
+<body>
+<div style="overflow:auto;">
+    <div class="menu">
+        <div onclick="got_to_portfolio_manager()" class="menu_button">Portfolios</div>
+        <div onclick="go_to_screener()" class="menu_button">Screener</div>
+    </div>
+    <div class="main_content">
+        <div>
+            <div class="logout-button" onclick="disconnect();">Log Out</div>
+            <div class="title">
+                <h1>Screener</h1>
+            </div>
+        </div>
+
+
+        <div id="data_content">
+            <div class="tab">
+                <button class="tablinks" onclick="openTab('summary_button', 'Summary')" id="summary_button">Summary</button>
+                <button class="tablinks" onclick="openTab('finances_button', 'Finances'); onOpenFinances();" id="finances_button">Finances</button>
+                <button class="tablinks active" onclick="openTab('dividends_button', 'Dividends'); onOpenDividends();" id="dividends_button">Dividends</button>
+            </div>
+            <div class="loader"></div>
+            <div id="Summary" class="tabcontent" style="display: block;">
+                <h1><span id="name_jinja"></span> (<span id="ticker_jinja"></span>)</h1>
+                <h2 id="sector_jinja"></h2>
+                <div id="last_update_jinja"></div>
+                <p id="description_jinja"></p>
+            </div>
+            <div id="Finances" class="tabcontent" style="display: block;">
+                <h2>Revenues</h2>
+                <p>Revenue is the income generated from normal business operations and includes discounts and deductions for returned merchandise. It is the top line or gross income figure from which costs are subtracted to determine net income. </p>
+                <div id='container_revenues'></div>
+                <h2>Net Income</h2>
+                <p>Net income (NI), also called net earnings, is calculated as sales minus cost of goods sold, selling, general and administrative expenses, operating expenses, depreciation, interest, taxes, and other expenses. It is a useful number for investors to assess how much revenue exceeds the expenses of an organization. This number appears on a company's income statement and is also an indicator of a company's profitability. </p>
+                <div id='container_earnings'></div>
+                <h2>Debt Ratio</h2>
+                <p>Debt is an amount of money borrowed by one party from another. Debt is used by many corporations and individuals as a method of making large purchases that they could not afford under normal circumstances. A debt arrangement gives the borrowing party permission to borrow money under the condition that it is to be paid back at a later date, usually with interest. </p>
+                <div id='container_debt_ratio'></div>
+            </div>
+            <div id="Dividends" class="tabcontent" style="display: block;">
+                <p class="div_score"><strong>Dividend Score:</strong> <span id="div_score_jinja"></span></p>
+                <table class="div_info">
+                    <tr>
+                        <th><h3>Div. Yield</h3></th>
+                        <th><h3>Last year Growth Rate</h3></th>
+                        <th><h3>3 Years Growth Rate</h3></th>
+                        <th><h3>5 Years Growth Rate</h3></th>
+                        <th><h3>Payout Ratio</h3></th>
+                        <th><h3>Dividend Growth</h3></th>
+                    </tr>
+                    <tr>
+                        <td><h2 id="div_yield_jinja"></h2></td>
+                        <td><h2 id="cagr_1_jinja"></h2></td>
+                        <td><h2 id="cagr_3_jinja"></h2></td>
+                        <td><h2 id="cagr_5_jinja"></h2></td>
+                        <td><h2 id="payout_ratio_jinja"></h2></td>
+                        <td><h2 id="continuous_dividend_growth_jinja"></h2></td>
+                    </tr>
+                </table>
+                <p>A dividend is the distribution of some of a company's earnings to a class of its shareholders, as determined by the company's board of directors.
+                    Common shareholders of dividend-paying companies are typically eligible as long as they own the stock before the ex-dividend date.
+                    ﻿                        Dividends may be paid out as cash or in the form of additional stock. </p>
+                <div id='container_dividend'></div>
+            </div>
+        </div>
+    </div>
+    <div class="right"></div>
+</div>
+</body>
+<script>
+    var request = new Request('/screener-api/{{ ticker|safe }}');
+    var data = [];
+    let tabcontent = document.getElementsByClassName("tabcontent");
+    for (let i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    let tabbuttons = document.getElementsByClassName("tablinks");
+    for (let i = 0; i < tabbuttons.length; i++) {
+        tabbuttons[i].disabled = true;
+    }
+    fetch(request).then(function(response) {
+        return response.text();
+    }).then(function(text) {
+        data = JSON.parse(text);
+        document.getElementById("div_score_jinja").innerText = data["dividend_features"]["div_score"]
+        document.getElementById("div_yield_jinja").innerText = data["dividend_features"]["div_yield"]
+        document.getElementById("cagr_1_jinja").innerText = data["dividend_features"]["cagr_1"]
+        document.getElementById("cagr_3_jinja").innerText = data["dividend_features"]["cagr_3"]
+        document.getElementById("cagr_5_jinja").innerText = data["dividend_features"]["cagr_5"]
+        document.getElementById("payout_ratio_jinja").innerText = data["dividend_features"]["payout_ratio"]
+        document.getElementById("continuous_dividend_growth_jinja").innerText = data["dividend_features"]["continuous_dividend_growth"]
+        document.getElementById("last_update_jinja").innerText = data["last_update"]
+        document.getElementById("name_jinja").innerText = data["name"]
+        document.getElementById("ticker_jinja").innerText = data["ticker"]
+        document.getElementById("sector_jinja").innerText = data["sector"]
+        document.getElementById("description_jinja").innerText = data["description"]
+        document.getElementsByClassName("loader")[0].style.display = "none";
+        openTab('summary_button', 'Summary');
+        var last_update = new Date(data["last_update"]);
+        var today = new Date();
+        var mil_to_days = 24*60*60*1000;
+        var diff_time = (today - last_update)/mil_to_days
+        var style_date = "last_update_recent";
+        if (diff_time> 1){
+            style_date = "last_update_late";
+        }
+        else if(diff_time > 5){
+            style_date = "last_update_passed";
+        }
+        document.getElementById("last_update_jinja").className = style_date;
+        let tabbuttons = document.getElementsByClassName("tablinks");
+        for (let i = 0; i < tabbuttons.length; i++) {
+            tabbuttons[i].disabled = false;
+        }
+    });
+    openTab('summary_button', 'Summary');
+    function onOpenDividends(){
+        document.getElementById("container_dividend").innerHTML = "";
+        new DivergingHierarchicalHorizontalBarChart("div#container_dividend", data["dividends_data"]["dividend"])
+    }
+    function onOpenFinances(){
+        document.getElementById("container_revenues").innerHTML = "";
+        document.getElementById("container_earnings").innerHTML = "";
+        document.getElementById("container_debt_ratio").innerHTML = "";
+        new DivergingHierarchicalHorizontalBarChart("div#container_revenues", data["financial_data"]["revenue"])
+        new DivergingHierarchicalHorizontalBarChart("div#container_earnings", data["financial_data"]["netIncome"])
+        new LineChart("div#container_debt_ratio", data["balance_sheet_data"])
+    }
+</script>
+</html>
+
