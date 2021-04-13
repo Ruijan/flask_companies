@@ -28,9 +28,9 @@
 
         <div id="data_content">
             <div class="tab">
-                <button class="tablinks" onclick="openTab('summary_button', 'Summary')" id="summary_button">Summary</button>
+                <button class="tablinks active" onclick="openTab('summary_button', 'Summary')" id="summary_button">Summary</button>
                 <button class="tablinks" onclick="openTab('finances_button', 'Finances'); onOpenFinances();" id="finances_button">Finances</button>
-                <button class="tablinks active" onclick="openTab('dividends_button', 'Dividends'); onOpenDividends();" id="dividends_button">Dividends</button>
+                <button class="tablinks" onclick="openTab('dividends_button', 'Dividends'); onOpenDividends();" id="dividends_button">Dividends</button>
             </div>
             <div class="loader"></div>
             <div id="Summary" class="tabcontent" style="display: block;">
@@ -95,6 +95,16 @@
         return response.text();
     }).then(function(text) {
         data = JSON.parse(text);
+        if("Error" in data){
+            document.getElementsByClassName("loader")[0].style.display = "none";
+            document.getElementById("data_content").innerHTML += "<div style='margin:auto;'>" + data['Error'] + "</div>"
+        }
+        else {
+            displayData(data);
+        }
+    });
+
+    function displayData(data){
         document.getElementById("div_score_jinja").innerText = data["dividend_features"]["div_score"]
         document.getElementById("div_yield_jinja").innerText = data["dividend_features"]["div_yield"]
         document.getElementById("cagr_1_jinja").innerText = data["dividend_features"]["cagr_1"]
@@ -125,8 +135,7 @@
         for (let i = 0; i < tabbuttons.length; i++) {
             tabbuttons[i].disabled = false;
         }
-    });
-    openTab('summary_button', 'Summary');
+    }
     function onOpenDividends(){
         document.getElementById("container_dividend").innerHTML = "";
         new DivergingHierarchicalHorizontalBarChart("div#container_dividend", data["dividends_data"]["dividend"])

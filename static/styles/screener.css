@@ -98,3 +98,45 @@ html::after {
 .screen_valid:active{
     font-size: 0.7em;
 }
+
+.data_content{
+    text-align: left;
+    -webkit-transition: all 0.5s ease-out;  
+    -moz-transition: all 0.5s ease-out;  
+    -o-transition: all 0.5s ease-out;  
+    -ms-transition: all 0.5s ease-out;  
+    transition: all 0.5s ease-out;
+    min-height:0px;
+    height: 0%;
+    visibility: hidden;
+    background-color: #302E2E;
+    margin-top: 30px;
+}
+
+.pop-out{
+    min-height: 500px;
+    visibility:visible;
+    height:100%;
+}
+
+.slide-in{
+    min-height: 0px;
+    visibility:hidden;
+    height:0%;
+}
+
+.loader {
+    border: 16px solid #f3f3f3; /* Light grey */
+    border-top: 16px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    margin: auto;
+    margin-top: 50px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

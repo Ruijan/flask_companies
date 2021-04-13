@@ -9,6 +9,7 @@ from flask import Flask, session, render_template, redirect, url_for
 from flask_pymongo import PyMongo, request
 from src.brokers.degiro import Degiro
 from src.cache.companies_cache import CompaniesCache, fetch_company_from_api
+from src.cache.error.bad_ticker import BadTicker
 from src.currency import Currency
 from src.displayer.company_displayer import display_company, get_company_data
 from all_functions import print_companies_to_html
@@ -148,8 +149,11 @@ def fetch_company_data(ticker):
         redirect(url_for("show_screener"))
     global companies_cache
     db_company = companies_cache.get(ticker)
-    update_company_infos(companies_cache, ticker)
-    data = get_company_data(db_company, ticker)
+    try:
+        update_company_infos(companies_cache, ticker)
+        data = get_company_data(db_company, ticker)
+    except BadTicker as e:
+        data = {"Error": e.message}
     return json.dumps(data, indent=2)
 
 
