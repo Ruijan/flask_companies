@@ -33,12 +33,12 @@ class LineChart {
         let z = d3.scaleOrdinal(d3.schemeCategory10).domain(this.root.map(d => d.key))
         let line = d3.line()
             .defined(d => !isNaN(d.value))
-            .x(d => x(d.date))
+            .x(d => x(d.date_object))
             .y(d => y(d.value))
 
         let area = d3.area()
             .curve(d3.curveLinear)
-            .x(d => x(d.date))
+            .x(d => x(d.date_object))
             .y0(y(0))
             .y1(d => y(d.value))
 
@@ -144,6 +144,7 @@ class LineChart {
             .attr("transform", `translate(${this.margin.left},0)`)
             .call(d3.axisLeft(y).ticks(this.height / 80, "s").tickFormat(function(d){return d3.format(".2s")(d).replace(/G/, "B")}))
             .call(g => g.select(".domain").remove())
+            .call(g => g.select(".domain").remove())
             .call(g => g.select(".tick:last-of-type text").clone()
                 .attr("x", 3)
                 .attr("text-anchor", "start")
@@ -193,7 +194,7 @@ class LineChart {
         let dates= [];
         this.root.forEach((d, i, value) => {
             d.values.forEach((el) => {
-                dates.push(el["date"])
+                dates.push(el["date_object"])
             })
         });
         return dates;
@@ -214,7 +215,7 @@ class LineChart {
         data.forEach((d) => {
             d.values.forEach((el) => {
                 const date = parseDate(el["date"]);
-                el["date"] = date
+                el["date_object"] = date
             })
         });
         return data;
