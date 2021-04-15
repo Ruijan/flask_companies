@@ -249,13 +249,14 @@ class DivergingHierarchicalHorizontalBarChart {
             .join("g")
             .attr("cursor", d => !d.children ? null : "pointer")
             .on("click", d => this.down(d));
-
+        let max_labels = 10;
+        let step_label = Math.round(this.getNbBars()/max_labels);
         bar.append("text")
             .attr("y", (d) => d.value > 0 ? this.center + 12 : this.center - 12 )
             .attr("x", this.barStep * (1 - this.barPadding) / 2)
             .attr("dy", ".35em")
             .attr('text-anchor', 'middle')
-            .text(d => d.data.name).style('fill', 'cornsilk');
+            .text((d, i) =>  i % step_label === 0 ? d.data.name : "").style('fill', 'cornsilk');
 
         // Three function that change the tooltip when user hover / move / leave a cell
         let mouseover = function(d) {

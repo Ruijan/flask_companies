@@ -9,6 +9,8 @@ import fmpsdk
 from pandas import Series, DataFrame
 from urllib.request import urlopen
 import json
+
+from src.cache.error.bad_ticker import BadTicker
 from src.extractor.dividend_analyzer import get_dividend_features
 from src.extractor.dividend_extractor import compute_dividends
 
@@ -112,13 +114,19 @@ def fetch_company_from_api(key, company, dividend_date):
     api_key = os.environ["FINANCE_KEY"]
     is_new_company = "ticker" not in company
     if "profile" not in company:
-        company["profile"] = fmpsdk.company_profile(apikey=api_key, symbol=key)[0]
+        profile = fmpsdk.company_profile(apikey=api_key, symbol=key)
+        if len(profile) == 0:
+            raise BadTicker(key)
+        company["profile"] = profile[0]
         company["ticker"] = company["profile"]["symbol"]
         company["ticker_text"] = company["profile"]["symbol"]
         company["name"] = company["profile"]["companyName"]
         company["sector"] = company["profile"]["sector"]
     company["finances"] = fmpsdk.income_statement(apikey=api_key, symbol=key, period="quarter", limit=100)
-    company["stats"] = fmpsdk.key_metrics(apikey=api_key, symbol=key, limit=1)[0]
+    key_metrics = fmpsdk.key_metrics(apikey=api_key, symbol=key, limit=1)
+    if len(key_metrics) == 0:
+        raise BadTicker(key)
+    company["stats"] = key_metrics[0]
     company["balance_sheet"] = fmpsdk.balance_sheet_statement(apikey=api_key, symbol=key, period="quarter", limit=100)
     dividends = fmpsdk.historical_stock_dividend(apikey=api_key, symbol=key)
     if "historical" in dividends:

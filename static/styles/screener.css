@@ -1,30 +1,31 @@
 .input {
-	
-	position:relative;
-	font-size: 1.5em;
-	background: linear-gradient(21deg, #10abff, #1beabd);
-	padding: 3px;
-	display: inline-block;
-	border-radius: 9999em;
-	
+
+    position: relative;
+    font-size: 1.5em;
+    background: linear-gradient(21deg, #10abff, #1beabd);
+    padding: 3px;
+    display: inline-block;
+    border-radius: 9999em;
+
 }
-.input span{
+
+.input span {
     transform: scale(.993, .94);
     transition: transform .5s, opacity .25s;
-    opacity: 0; 
+    opacity: 0;
 
-    position:absolute;
+    position: absolute;
     z-index: 0;
-    margin:4px;
-    left:0;
-    top:0;
-    right:0;
-    bottom:0;
+    margin: 4px;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
     border-radius: inherit;
     pointer-events: none;
     box-shadow: inset 0 0 0 3px #fff,
         0 0 0 4px #fff,
-        3px -3px 30px #1beabd, 
+        3px -3px 30px #1beabd,
         -3px 3px 30px #10abff;
 }
 
@@ -37,7 +38,7 @@
     outline: none;
     padding: 0 .325em;
     z-index: 1;
-}	
+}
 
 .input &:focus + span {
     opacity: 1;
@@ -45,56 +46,199 @@
 }
 
 html {
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-	line-height:1.5;
-	font-size:1em;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    line-height: 1.5;
+    font-size: 1em;
 }
 
 body {
-	text-align: center;
-	display:flex;
-	align-items: center;
-	justify-content: center;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
 }
 
-html, body {
-	height:100%;
+html,
+body {
+    height: 100%;
 }
 
 input {
-	font-family: inherit;
-	line-height:inherit;
-	color:#2e3750;
+    font-family: inherit;
+    line-height: inherit;
+    color: #2e3750;
     height: 3em;
-	min-width:25em;
-    padding-left:5px;
+    min-width: 25em;
+    padding-left: 5px;
 }
 
-h1{
+h1 {
     font-size: 5em;
 }
 
 ::placeholder {
-	color:#cbd0d5;
+    color: #cbd0d5;
 }
 
 html::after {
-	content:'';
-	background: linear-gradient(21deg, #10abff, #1beabd);
-	height:3px;
-	width:100%;
-	position:absolute;
-	left:0;
-	top:0;
+    content: '';
+    background: linear-gradient(21deg, #10abff, #1beabd);
+    height: 3px;
+    width: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
 }
-.screen_valid{
+
+.screen_valid {
     background-color: transparent;
     margin: 10px;
     min-width: 75px;
 }
-.screen_valid:hover{
+
+.screen_valid:hover {
     font-size: 0.8em;
 }
-.screen_valid:active{
+
+.screen_valid:active {
     font-size: 0.7em;
+}
+
+.data_content {
+    text-align: left;
+    -webkit-transition: all 0.5s ease-out;
+    -moz-transition: all 0.5s ease-out;
+    -o-transition: all 0.5s ease-out;
+    -ms-transition: all 0.5s ease-out;
+    overflow: hidden;
+    transition: all 0.5s ease-out;
+    height: 0px;
+    background-color: #302E2E;
+    margin-top: 30px;
+}
+
+.full-height {
+    height: 100%;
+}
+
+.pop-out {
+    height: 500px;
+}
+
+
+.loader {
+    border: 16px solid #f3f3f3;
+    /* Light grey */
+    border-top: 16px solid #3498db;
+    /* Blue */
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    margin: auto;
+    margin-top: 50px;
+    animation: spin 1s linear infinite;
+}
+
+#error{
+    
+}
+
+.error-content {
+    display: flex;
+    align-items: center; /* Vertical center alignment */
+    justify-content: center; /* Horizontal center alignment */
+    background-color: crimson;
+    width: 50%;
+    margin: auto;
+    height: 0px;
+    overflow: hidden;
+    margin-top: 30px;
+    border-radius: 10px;
+    font-size: 2em;
+    -webkit-transition: all 0.3s ease-out;
+    -moz-transition: all 0.3s ease-out;
+    -o-transition: all 0.3s ease-out;
+    -ms-transition: all 0.3s ease-out;
+}
+
+.pop-out-error {
+    height: 50px;
+}
+
+.slide-in-error {
+    height: 0px;
+}
+
+#tickers{
+    margin: auto;
+    background-color: darkslategray;
+    border-bottom-left-radius: 10px;
+    font-size: 1.1em;
+    text-align: left;
+    width: 25em;
+
+}
+.ticker_datalist{
+    height: 0;
+    overflow-y: scroll;
+    transition: all 0.3s ease-out;
+    -webkit-transition: all 0.3s ease-out;
+    -moz-transition: all 0.3s ease-out;
+    -o-transition: all 0.3s ease-out;
+    -ms-transition: all 0.3s ease-out;
+}
+
+.pop-out-datalist {
+    height: 150px;
+}
+
+#tickers div{
+    padding: 7px;
+    cursor: pointer;
+}
+
+#tickers div:hover{
+    background-color: black;
+}
+
+.company_name_datalist{
+    font-size: 0.90em;
+}
+
+/* width */
+::-webkit-scrollbar {
+  width: 10px;
+    position: -10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #f1f1f1; 
+}
+ 
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #888; 
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555; 
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@media only screen and (max-width:720px) {
+    .error-content {
+        width: 100%;
+    }
 }
