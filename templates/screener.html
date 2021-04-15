@@ -26,22 +26,22 @@
 <body>
         <div class="main_content">
             <h1>Screener</h1>
-            <p>
+            <div >
                 <span class="input">
                     <input type="text" placeholder="Enter company name or ticker: MSFT" onkeyup=" suggestCompanies(event, tickers);" id="ticker_input" list="tickers">
                     <button class="screen_valid" onclick="startSearch();"><strong>SEARCH</strong></button>
                     <span></span>
-
                 </span>
-                <datalist id="tickers">
-                    <option value="MSFT">Microsoft
-                    <option value="AAPL">Apple
-                    <option value="IBM">Innovative Business Machine
-                    <option value="T">AT&T
-                </datalist>
-            </p>
+                <div id="tickers" class="ticker_datalist">
+                    <div class=""><strong>MSFT</strong><br/><span class="company_name_datalist" onclick="document.getElementById('ticker_input').value='MSFT';">Microsoft</span></div>
+                    <div class=""><strong>AAPL</strong><br/><span class="company_name_datalist" onclick="document.getElementById('ticker_input').value='AAPL';">Apple</span></div>
+                    <div class=""><strong>IBM</strong><br/><span class="company_name_datalist" onclick="document.getElementById('ticker_input').value='IBM';">Innovative Business Machine</span></div>
+                    <div class=""><strong>T</strong><br/><span class="company_name_datalist" onclick="document.getElementById('ticker_input').value='T';">AT&T</span></div>
+                </div>
+            </div>
+            
             <div class="loader" style="display: none;"></div>
-            <div class="error" style="display: none;"></div>
+            <div id="error" style="display: block;"><div class="error-content"><span>No company found for ticker: BXND</span></div></div>
             <div id="company_data" class="data_content">
                 <div class="tab">
                     <button class="tablinks active" onclick="openTab('summary_button', 'Summary')" id="summary_button">Summary</button>
@@ -154,7 +154,9 @@
       return new Promise(resolve => setTimeout(resolve, ms));
    }
     function startSearch(){
+        document.getElementById("company_data").classList.remove('full-height');
         document.getElementsByClassName("loader")[0].style.display = "block";
+
         let ticker = document.getElementById("ticker_input").value;
         let ticker_length = ticker.length;
         ticker = ticker.substring(0, ticker_length < 8 ? ticker_length : 8);
@@ -166,14 +168,20 @@
             data = JSON.parse(text);
             if("Error" in data){
                 document.getElementsByClassName("loader")[0].style.display = "none";
-                document.getElementById("error").innerHTML += data['Error']
+                document.getElementsByClassName("error-content")[0].classList.add('pop-out-error');
+                document.getElementsByClassName("error-content")[0].innerHTML = data['Error'];
+                sleep(10000).then(() => {
+                    document.getElementsByClassName("error-content")[0].classList.add('slide-in-error');
+                })
             }
             else {
                 company_data = data;
                 document.getElementsByClassName("loader")[0].style.display = "none";
+                displayData(company_data);
                 document.getElementById("company_data").classList.add('pop-out');
                 sleep(500).then(() => {
-                    displayData(company_data);
+                    document.getElementById("company_data").classList.remove('pop-out');
+                    document.getElementById("company_data").classList.add('full-height');
                 })
             }
         });
@@ -189,15 +197,25 @@
         if (event.keyCode === 13) {
             startSearch();
         } else if(event.keyCode > 40 || event.keyCode < 9) { // don't take into account arrow keys and random values that are not important
+            document.getElementById("tickers").classList.add("pop-out-datalist");
             let str=''; // variable to store the options
             let ticker_value = document.getElementById("ticker_input").value;
             for (var i = 0; i < tickers["Tickers"].length; i++) {
                 if (tickers["Tickers"][i].startsWith(ticker_value)) {
-                    str += '<option value="'+tickers["Tickers"][i]+'" >' + tickers["Name"][i] + "</option>"; // Storing options in variable
+                    str += "<div onclick=\"selectTicker('" + tickers['Tickers'][i] + "');\"><strong>"+tickers["Tickers"][i]+"</strong><br/><span class=\"company_name_datalist\">" + tickers["Name"][i] + "</span></div>\n"
                 }
             }
             let my_list=document.getElementById("tickers");
             my_list.innerHTML = str;
         }
+    }
+
+    function selectTicker(ticker){
+        let c_ticker = document.getElementById('ticker_input').value;
+        if(c_ticker !== ticker){
+            document.getElementById('ticker_input').value = 'ticker';
+        }
+        startSearch();
+        document.getElementById('tickers').classList.remove('pop-out-datalist');
     }
 </script>
