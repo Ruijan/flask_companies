@@ -123,6 +123,7 @@ def fetch_company_from_api(key, company, dividend_date):
         company["name"] = company["profile"]["companyName"]
         company["sector"] = company["profile"]["sector"]
     company["finances"] = fmpsdk.income_statement(apikey=api_key, symbol=key, period="quarter", limit=100)
+    company["news"] = fmpsdk.stock_news(apikey=api_key, tickers=[key], limit=50)
     key_metrics = fmpsdk.key_metrics(apikey=api_key, symbol=key, limit=1)
     if len(key_metrics) == 0:
         raise BadTicker(key)

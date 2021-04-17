@@ -107,23 +107,8 @@ html::after {
 
 .data_content {
     text-align: left;
-    -webkit-transition: all 0.5s ease-out;
-    -moz-transition: all 0.5s ease-out;
-    -o-transition: all 0.5s ease-out;
-    -ms-transition: all 0.5s ease-out;
-    overflow: hidden;
-    transition: all 0.5s ease-out;
-    height: 0px;
     background-color: #302E2E;
     margin-top: 30px;
-}
-
-.full-height {
-    height: 100%;
-}
-
-.pop-out {
-    height: 500px;
 }
 
 
@@ -140,9 +125,6 @@ html::after {
     animation: spin 1s linear infinite;
 }
 
-#error{
-    
-}
 
 .error-content {
     display: flex;
@@ -151,46 +133,20 @@ html::after {
     background-color: crimson;
     width: 50%;
     margin: auto;
-    height: 0px;
-    overflow: hidden;
     margin-top: 30px;
     border-radius: 10px;
     font-size: 2em;
-    -webkit-transition: all 0.3s ease-out;
-    -moz-transition: all 0.3s ease-out;
-    -o-transition: all 0.3s ease-out;
-    -ms-transition: all 0.3s ease-out;
-}
-
-.pop-out-error {
-    height: 50px;
-}
-
-.slide-in-error {
-    height: 0px;
 }
 
 #tickers{
     margin: auto;
     background-color: darkslategray;
     border-bottom-left-radius: 10px;
+    height: 200px;
+    overflow-y: scroll;
     font-size: 1.1em;
     text-align: left;
     width: 25em;
-
-}
-.ticker_datalist{
-    height: 0;
-    overflow-y: scroll;
-    transition: all 0.3s ease-out;
-    -webkit-transition: all 0.3s ease-out;
-    -moz-transition: all 0.3s ease-out;
-    -o-transition: all 0.3s ease-out;
-    -ms-transition: all 0.3s ease-out;
-}
-
-.pop-out-datalist {
-    height: 150px;
 }
 
 #tickers div{
