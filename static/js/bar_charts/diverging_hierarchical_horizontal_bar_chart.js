@@ -2,11 +2,11 @@ class DivergingHierarchicalHorizontalBarChart {
     constructor(container_name, data) {
         this.root = this.transformData(data)
         this.c_name = container_name
-        this.margin = ({top: 30, right: 30, bottom: 30, left: 30})
+        this.margin = ({top: 30, right: 30, bottom: 30, left: 40})
         this.container = d3.select(container_name)
         this.width = this.container.node().getBoundingClientRect().width - this.margin.right - this.margin.left;
         this.height = this.width/3;
-        this.barStep = this.width/this.getNbBars();
+        this.barStep = this.width/this.getNbBars(this.root);
         this.barPadding = 3/this.barStep;
         this.container.style("height", (this.height + this.margin.bottom + this.margin.top)+"px");
         this.init()
@@ -26,7 +26,7 @@ class DivergingHierarchicalHorizontalBarChart {
     }
 
     init(){
-        this.duration = 500
+        this.duration = 1500
     }
 
     transformData(data) {
@@ -52,6 +52,7 @@ class DivergingHierarchicalHorizontalBarChart {
             .on("click", d => this.up(d));
         this.yAxis = g => g
             .attr("class", "y-axis")
+            .style("font", "14px sans-serif")
             .attr("transform", `translate(${this.margin.left+6},0)`)
             .call(d3.axisLeft(this.y).ticks(this.height / 80, "s").tickFormat(function(d){return d3.format(".2s")(d).replace(/G/, "B")}))
             .call(g => (g.selection ? g.selection() : g).select(".domain").remove())
@@ -72,9 +73,9 @@ class DivergingHierarchicalHorizontalBarChart {
         this.down(this.root);
     }
 
-    getNbBars(){
+    getNbBars(data){
         let max = 1;
-        this.root.each(d => d.children && (max = Math.max(max, d.children.length)));
+        data.each(d => d.children && (max = Math.max(max, d.children.length)));
         return max;
     }
 
@@ -87,7 +88,7 @@ class DivergingHierarchicalHorizontalBarChart {
         // Define two sequenced transitions.
         const transition1 = this.svg.transition().duration(this.duration);
         const transition2 = transition1.transition();
-
+        let barStep = this.width/this.getNbBars(d.parent);
         // Mark any currently-displayed bars as exiting.
         const exit = this.svg.selectAll(".enter")
             .attr("class", "exit");
@@ -102,16 +103,17 @@ class DivergingHierarchicalHorizontalBarChart {
 
         // Transition exiting bars to the new y-scale.
         exit.selectAll("g").transition(transition1)
-            .attr("transform", stagger(this.y, this.barStep));
-
+            .attr("transform", stagger(this.y, barStep));
+        let previousBarStep = this.width/this.getNbBars(d);
         // Transition exiting bars to the parent’s position.
         exit.selectAll("g").transition(transition2)
-            .attr("transform", stack(d.index, this.y, this.barStep, this.center - previous_center));
+            .attr("transform", stack(d.index, this.y, barStep, this.center - previous_center));
 
         // Transition exiting rects to the new scale and fade to parent color.
         exit.selectAll("rect").transition(transition1)
             .attr("height", d => getHeight(d.value, this.y))
-            .attr("fill", d => d.value > 0 ? this.color(1) : this.color(0));
+            .attr("fill", d => d.value > 0 ? this.color(1) : this.color(0))
+            .attr("transform", `scale(${barStep/previousBarStep}, 1)`);
 
         // Transition exiting text to fade out.
         // Remove exiting nodes.
@@ -120,12 +122,13 @@ class DivergingHierarchicalHorizontalBarChart {
             .remove();
 
         // Enter the new bars for the clicked-on data's parent.
+        barStep = this.width/this.getNbBars(d.parent);
         const enter = this.createBar(d.parent, ".exit")
             .attr("fill-opacity", 0);
 
         // Transition entering bars to the new y-scale.
         enter.selectAll("g").transition(transition2)
-            .attr("transform", (d, i) => `translate(${this.barStep * i}, ${getYPos(d.value, this.y, 0)})`)
+            .attr("transform", (d, i) => `translate(${barStep * i}, ${getYPos(d.value, this.y, 0)})`)
         enter.selectAll("text")
             .attr("transform", (d, i) => `translate(0,${-getYPos(d.value, this.y, 0)})`);
 
@@ -180,16 +183,16 @@ class DivergingHierarchicalHorizontalBarChart {
         }
         const enter = this.createBar(d, ".y-axis")
             .attr("fill-opacity", 0);
-
+        let barStep = this.width/this.getNbBars(d);
         // Have the text fade-in, even though the bars are visible.
         enter.transition(transition1)
             .attr("fill-opacity", 1);
 
         // Transition entering bars to their new x-position.
         enter.selectAll("g")
-            .attr("transform", stack(d.index, this.y, this.barStep, 0))
+            .attr("transform", stack(d.index, this.y, barStep, 0))
             .transition(transition1)
-            .attr("transform", stagger(this.y, this.barStep));
+            .attr("transform", stagger(this.y, barStep));
 
         // Update the y-scale domain.
         if (!isCenterChanging){
@@ -204,7 +207,7 @@ class DivergingHierarchicalHorizontalBarChart {
 
         // Transition entering bars to the new y-scale.
         enter.selectAll("g").transition(transition2)
-            .attr("transform", (d, i) => `translate(${this.barStep * i},${getYPos(d.value, this.y, 0)})`)
+            .attr("transform", (d, i) => `translate(${barStep * i},${getYPos(d.value, this.y, 0)})`)
         enter.selectAll("text")
             .attr("transform", (d, i) => `translate(0, ${-getYPos(d.value, this.y, 0)})`);
 
@@ -238,9 +241,11 @@ class DivergingHierarchicalHorizontalBarChart {
 // Creates a set of bars for the given data node, at the specified index.
     createBar(d, selector) {
         let chart = this;
+        let barStep = this.width/this.getNbBars(d);
+        let barPadding = 5/barStep;
         const g = this.svg.insert("g", selector)
             .attr("class", "enter")
-            .attr("transform", `translate(${this.margin.left + this.barStep * this.barPadding},0)`)
+            .attr("transform", `translate(${this.margin.left + barStep * barPadding},0)`)
             .attr("text-anchor", "middle")
             .style("font", "14px sans-serif").style('fill', 'cornsilk');
 
@@ -250,10 +255,10 @@ class DivergingHierarchicalHorizontalBarChart {
             .attr("cursor", d => !d.children ? null : "pointer")
             .on("click", d => this.down(d));
         let max_labels = 10;
-        let step_label = Math.round(this.getNbBars()/max_labels);
+        let step_label = Math.ceil(this.getNbBars(d)/max_labels);
         bar.append("text")
             .attr("y", (d) => d.value > 0 ? this.center + 12 : this.center - 12 )
-            .attr("x", this.barStep * (1 - this.barPadding) / 2)
+            .attr("x", barStep * (1 - barPadding) / 2)
             .attr("dy", ".35em")
             .attr('text-anchor', 'middle')
             .text((d, i) =>  i % step_label === 0 ? d.data.name : "").style('fill', 'cornsilk');
@@ -286,7 +291,7 @@ class DivergingHierarchicalHorizontalBarChart {
         bar.append("rect")
             .attr("y", this.center)
             .attr("height", d => getHeight(d.value, this.y))
-            .attr("width", this.barStep * (1 - this.barPadding))
+            .attr("width", barStep * (1 - barPadding))
             .on('mouseenter', function (actual, i) {
                 d3.select(this).attr('opacity', 0.5)
                 bar.selectAll('#limit').remove()
@@ -302,12 +307,12 @@ class DivergingHierarchicalHorizontalBarChart {
                     .attr('y1', (d) => pos_y + (d.value < 0 ? 0 : getHeight(d.value, chart.y)))
                     .attr('x1', 0)
                     .attr('y2', (d) => pos_y + (d.value < 0 ? 0 : getHeight(d.value, chart.y)))
-                    .attr('x2', chart.barStep)
+                    .attr('x2', barStep)
                     .attr('stroke', 'red')
                 bar.append('text')
                     .attr('class', 'divergence')
                     .attr('y', (a) => a.value < 0 ? chart.y(a.value) + 12 : chart.y(a.value) + getHeight(a.value, chart.y) - 12)
-                    .attr('x', (a) => chart.barStep * (1 - chart.barPadding) / 2)
+                    .attr('x', (a) => barStep * (1 - barPadding) / 2)
                     .attr('fill', 'white')
                     .attr('text-anchor', 'middle')
                     .text((a, idx) => {

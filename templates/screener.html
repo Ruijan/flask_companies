@@ -26,17 +26,17 @@
 <body>
         <div class="main_content">
             <h1>Screener</h1>
-            <div >
-                <span class="input">
-                    <input type="text" placeholder="Enter company name or ticker: MSFT" onkeyup=" suggestCompanies(event, tickers);" id="ticker_input" list="tickers">
+            <div onblur="document.getElementById('tickers').classList.remove('pop-out-datalist');">
+                <span class="input" >
+                    <input type="text" placeholder="Enter company's ticker: MSFT" onkeyup="suggestCompanies(event, tickers);" id="ticker_input" list="tickers" onfocus="document.getElementById('tickers').classList.add('pop-out-datalist');" >
                     <button class="screen_valid" onclick="startSearch();"><strong>SEARCH</strong></button>
                     <span></span>
                 </span>
                 <div id="tickers" class="ticker_datalist">
-                    <div class=""><strong>MSFT</strong><br/><span class="company_name_datalist" onclick="document.getElementById('ticker_input').value='MSFT';">Microsoft</span></div>
-                    <div class=""><strong>AAPL</strong><br/><span class="company_name_datalist" onclick="document.getElementById('ticker_input').value='AAPL';">Apple</span></div>
-                    <div class=""><strong>IBM</strong><br/><span class="company_name_datalist" onclick="document.getElementById('ticker_input').value='IBM';">Innovative Business Machine</span></div>
-                    <div class=""><strong>T</strong><br/><span class="company_name_datalist" onclick="document.getElementById('ticker_input').value='T';">AT&T</span></div>
+                    <div onclick="selectTicker('MSFT');"><strong>MSFT</strong><br/><span class="company_name_datalist">Microsoft</span></div>
+                    <div onclick="selectTicker('AAPL');"><strong>AAPL</strong><br/><span class="company_name_datalist">Apple</span></div>
+                    <div onclick="selectTicker('IBM');"><strong>IBM</strong><br/><span class="company_name_datalist">Innovative Business Machine</span></div>
+                    <div onclick="selectTicker('T');"><strong>T</strong><br/><span class="company_name_datalist" >AT&T</span></div>
                 </div>
             </div>
             
@@ -155,9 +155,10 @@
    }
     function startSearch(){
         document.getElementById("company_data").classList.remove('full-height');
+        document.getElementById('tickers').classList.remove('pop-out-datalist');
         document.getElementsByClassName("loader")[0].style.display = "block";
 
-        let ticker = document.getElementById("ticker_input").value;
+        let ticker = document.getElementById("ticker_input").value.toUpperCase();
         let ticker_length = ticker.length;
         ticker = ticker.substring(0, ticker_length < 8 ? ticker_length : 8);
         var request = new Request('/screener-api/' + ticker);
@@ -196,10 +197,14 @@
     function suggestCompanies(event, tickers) {
         if (event.keyCode === 13) {
             startSearch();
-        } else if(event.keyCode > 40 || event.keyCode < 9) { // don't take into account arrow keys and random values that are not important
+        }
+        else if(event.keyCode === 27){
+            document.getElementById("tickers").classList.remove("pop-out-datalist");
+        }
+        else if(event.keyCode > 40 || event.keyCode < 9) { // don't take into account arrow keys and random values that are not important
             document.getElementById("tickers").classList.add("pop-out-datalist");
             let str=''; // variable to store the options
-            let ticker_value = document.getElementById("ticker_input").value;
+            let ticker_value = document.getElementById("ticker_input").value.toUpperCase();
             for (var i = 0; i < tickers["Tickers"].length; i++) {
                 if (tickers["Tickers"][i].startsWith(ticker_value)) {
                     str += "<div onclick=\"selectTicker('" + tickers['Tickers'][i] + "');\"><strong>"+tickers["Tickers"][i]+"</strong><br/><span class=\"company_name_datalist\">" + tickers["Name"][i] + "</span></div>\n"
@@ -213,7 +218,7 @@
     function selectTicker(ticker){
         let c_ticker = document.getElementById('ticker_input').value;
         if(c_ticker !== ticker){
-            document.getElementById('ticker_input').value = 'ticker';
+            document.getElementById('ticker_input').value = ticker;
         }
         startSearch();
         document.getElementById('tickers').classList.remove('pop-out-datalist');
