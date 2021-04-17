@@ -26,7 +26,7 @@ class DivergingHierarchicalHorizontalBarChart {
     }
 
     init(){
-        this.duration = 1500
+        this.duration = 500
     }
 
     transformData(data) {
