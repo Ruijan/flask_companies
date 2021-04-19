@@ -41,8 +41,11 @@ def get_company_data(db_company, ticker):
                          ["div_yield", "cagr_1", "cagr_3", "cagr_5", "payout_ratio"]}
     features["continuous_dividend_growth"] = str(dividend_features["continuous_dividend_growth"])
     features["div_score"] = "{:20,.0f}".format(dividend_features["div_score"] * 100)
+    news = db_company["news"] if "news" in db_company else {}
+
     company_data = {"name": db_company["name"],
                     "ticker": ticker,
+                    "news": news,
                     "sector": db_company["sector"],
                     "description": db_company["profile"]["description"],
                     "financial_data": get_yearly_hierarchical_data(db_company["finances"], ["revenue", "netIncome"],
