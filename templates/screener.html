@@ -49,16 +49,31 @@
             
             <div class="loader" style="display: none;"></div>
             <div id="error" class="collapse alert alert-danger"><div class="error-content"><span>No company found for ticker: BXND</span></div></div>
-            <div id="company_data" class="data_content collapse">
-                <div class="tab">
-                    <button class="tablinks active" onclick="openTab('summary_button', 'Summary')" id="summary_button">Summary</button>
+            <div id="company_data" class="data_content collapse mb-5">
+                <div class="card text-white bg-dark" style="width: 100%;">
+                    <div class="row g-0">
+                        <div class="col-md-3 d-flex flex-wrap align-items-center justify-content-center">
+                            <img src="" alt="" id="image_jinja" style="width: 50%;"/>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="card-body">
+                                <h1><span id="name_jinja"></span> (<span id="ticker_jinja"></span>)</h1>
+                                <h2 id="sector_jinja"></h2>
+                                <h2 id="price_jinja"></h2>
+                                <div id="last_update_jinja"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab mb-5">
+                    <button class="tablinks active" onclick="openTab('summary_button', 'Summary'); onOpenSummary();" id="summary_button">Summary</button>
                     <button class="tablinks" onclick="openTab('finances_button', 'Finances'); onOpenFinances();" id="finances_button">Finances</button>
                     <button class="tablinks" onclick="openTab('dividends_button', 'Dividends'); onOpenDividends();" id="dividends_button">Dividends</button>
                 </div>
                 <div id="Summary" class="tabcontent" style="display: block;">
-                    <h1><span id="name_jinja"></span> (<span id="ticker_jinja"></span>)</h1>
-                    <h2 id="sector_jinja"></h2>
-                    <div id="last_update_jinja"></div>
+                    <h2>Historical Prices</h2>
+                    <div id="container_historical_prices"></div>
+                    <h2>Description</h2>
                     <p id="description_jinja"></p>
                     <h2>News</h2>
                     <div id="news_jinja" class="container"></div>
@@ -78,20 +93,20 @@
                     <p class="div_score"><strong>Dividend Score:</strong> <span id="div_score_jinja"></span></p>
                     <table class="div_info">
                         <tr>
-                            <th><h4>Div. Yield</h4></th>
-                            <th><h4>Last year<br/> Growth Rate</h4></th>
-                            <th><h4>3 Years Growth Rate</h4></th>
-                            <th><h4>5 Years Growth Rate</h4></th>
-                            <th><h4>Payout Ratio</h4></th>
-                            <th><h4>Dividend Growth</h4></th>
+                            <th><h5>Div. Yield</h5></th>
+                            <th><h5>Last year<br/> Growth Rate</h5></th>
+                            <th><h5>3 Years Growth Rate</h5></th>
+                            <th><h5>5 Years Growth Rate</h5></th>
+                            <th><h5>Payout Ratio</h5></th>
+                            <th><h5>Dividend Growth</h5></th>
                         </tr>
                         <tr>
-                            <td><h3 id="div_yield_jinja"></h3></td>
-                            <td><h3 id="cagr_1_jinja"></h3></td>
-                            <td><h3 id="cagr_3_jinja"></h3></td>
-                            <td><h3 id="cagr_5_jinja"></h3></td>
-                            <td><h3 id="payout_ratio_jinja"></h3></td>
-                            <td><h3 id="continuous_dividend_growth_jinja"></h3></td>
+                            <td><h4 id="div_yield_jinja"></h4></td>
+                            <td><h4 id="cagr_1_jinja"></h4></td>
+                            <td><h4 id="cagr_3_jinja"></h4></td>
+                            <td><h4 id="cagr_5_jinja"></h4></td>
+                            <td><h4 id="payout_ratio_jinja"></h4></td>
+                            <td><h4 id="continuous_dividend_growth_jinja"></h4></td>
                         </tr>
                     </table>
                     <p>A dividend is the distribution of some of a company's earnings to a class of its shareholders, as determined by the company's board of directors.
@@ -113,6 +128,7 @@
         tabcontent[i].style.display = "none";
     }
     var company_data = [];
+    var timerID = -1;
     function displayData(data){
         document.getElementById("div_score_jinja").innerText = data["dividend_features"]["div_score"]
         document.getElementById("div_yield_jinja").innerText = data["dividend_features"]["div_yield"]
@@ -122,10 +138,13 @@
         document.getElementById("payout_ratio_jinja").innerText = data["dividend_features"]["payout_ratio"]
         document.getElementById("continuous_dividend_growth_jinja").innerText = data["dividend_features"]["continuous_dividend_growth"] + " Years"
         document.getElementById("last_update_jinja").innerText = data["last_update"]
+        document.getElementById("image_jinja").innerText = data["image"]
         document.getElementById("name_jinja").innerText = data["name"]
         document.getElementById("ticker_jinja").innerText = data["ticker"]
         document.getElementById("sector_jinja").innerText = data["sector"]
         document.getElementById("description_jinja").innerText = data["description"]
+        document.getElementById("price_jinja").innerText = data["price"]
+        document.getElementById("image_jinja").src = data["image"]
         let newsLength = data["news"].length < 10 ? data["news"].length : 10;
         let newsHTML ="<div class='row row-cols-1 row-cols-md-3 g-4'>"
         for(let i=0; i<newsLength; i++){
@@ -146,11 +165,11 @@
         newsHTML +="</div>"
         document.getElementById("news_jinja").innerHTML = newsHTML;
         openTab('summary_button', 'Summary');
-        var last_update = new Date(data["last_update"]);
-        var today = new Date();
-        var mil_to_days = 24*60*60*1000;
-        var diff_time = (today - last_update)/mil_to_days
-        var style_date = "last_update_recent";
+        let last_update = new Date(data["last_update"]);
+        let today = new Date();
+        let mil_to_days = 24*60*60*1000;
+        let diff_time = (today - last_update)/mil_to_days
+        let style_date = "last_update_recent";
         if (diff_time> 1){
             style_date = "last_update_late";
         }
@@ -162,8 +181,15 @@
         for (let i = 0; i < tabbuttons.length; i++) {
             tabbuttons[i].disabled = false;
         }
+        sleep(500).then( () =>{
+            onOpenSummary();
+        })
     }
-    
+    function onOpenSummary(){
+        document.getElementById("container_historical_prices").innerHTML = "";
+        new LineChart("div#container_historical_prices", company_data["price_data"], false)
+    }
+
     function onOpenDividends(){
         document.getElementById("container_dividend").innerHTML = "";
         new DivergingHierarchicalHorizontalBarChart("div#container_dividend", company_data["dividends_data"]["dividend"])
@@ -183,7 +209,10 @@
     function startSearch(){
         $("#tickers").collapse('hide');
         $("#company_data").collapse('hide');
-
+        if (timerID !== -1){
+            clearInterval(timerID); // The setInterval it cleared and doesn't run anymore.
+        }
+        timerID = -1;
         document.getElementsByClassName("loader")[0].style.display = "block";
 
         let ticker = document.getElementById("ticker_input").value.toUpperCase();
@@ -195,6 +224,9 @@
             return response.text();
         }).then(function(text) {
             data = JSON.parse(text);
+
+
+
             if("Error" in data){
                 document.getElementsByClassName("loader")[0].style.display = "none";
                 document.getElementsByClassName("error-content")[0].innerHTML = data['Error'];
@@ -208,6 +240,8 @@
                 document.getElementsByClassName("loader")[0].style.display = "none";
                 displayData(company_data);
                 $("#company_data").collapse('show');
+                updatePrice(ticker);
+                timerID = createRoutineForTicker(10 * 1000, updatePrice, ticker);
             }
         });
         
@@ -220,7 +254,10 @@
     
     function suggestCompanies(event, tickers) {
         if (event.keyCode === 13) {
-            startSearch();
+            let ticker = document.getElementById("ticker_input").value.toUpperCase();
+            if (ticker.length > 0){
+                startSearch();
+            }
         }
         else if(event.keyCode === 27){
             $("#tickers").collapse('hide');
@@ -229,13 +266,15 @@
             $("#tickers").collapse("show");
             let str=''; // variable to store the options
             let ticker_value = document.getElementById("ticker_input").value.toUpperCase();
-            for (var i = 0; i < tickers["Tickers"].length; i++) {
-                if (tickers["Tickers"][i].startsWith(ticker_value)) {
-                    str += "<div onclick=\"selectTicker('" + tickers['Tickers'][i] + "');\"><strong>"+tickers["Tickers"][i]+"</strong><br/><span class=\"company_name_datalist\">" + tickers["Name"][i] + "</span></div>\n"
+            if (ticker_value.length > 0){
+                for (var i = 0; i < tickers["Tickers"].length; i++) {
+                    if (tickers["Tickers"][i].startsWith(ticker_value)) {
+                        str += "<div onclick=\"selectTicker('" + tickers['Tickers'][i] + "');\"><strong>"+tickers["Tickers"][i]+"</strong><br/><span class=\"company_name_datalist\">" + tickers["Name"][i] + "</span></div>\n"
+                    }
                 }
+                let my_list=document.getElementById("tickers");
+                my_list.innerHTML = str;
             }
-            let my_list=document.getElementById("tickers");
-            my_list.innerHTML = str;
         }
     }
 
@@ -245,5 +284,25 @@
             document.getElementById('ticker_input').value = ticker;
         }
         startSearch();
+    }
+
+    function createRoutineForTicker(interval, func, ticker) {
+        return setInterval(function () {
+            func(ticker);
+        }, interval);
+    }
+
+    function updatePrice(ticker){
+        let request = new Request('/quote-api/' + ticker);
+        fetch(request).then(function (response) {
+            return response.text();
+        }).then(function (text) {
+            let quote = JSON.parse(text);
+            let isPositive = quote[0]["change"] > 0;
+            let color = isPositive ? "#82b446" : "red";
+            let price = quote[0]["price"].toString() + " <span style='font-size: 1.75rem;color: " + color +"'>" + (isPositive ? "+": "") +  quote[0]["change"].toString() +
+                " (" + quote[0]["changesPercentage"].toString() + "%)</span>";
+            $("#price_jinja").html(price);
+        });
     }
 </script>

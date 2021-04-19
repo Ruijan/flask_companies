@@ -1,14 +1,15 @@
 class LineChart {
-    constructor(container_name, data, margin = ({top: 30, right: 50, bottom: 30, left: 50})) {
+    constructor(container_name, data, showLegends=true) {
         this.dates = this.getUniqueDates(data["data"])
         this.root = this.transformData(data["data"])
         this.c_name = container_name
-        this.margin = margin
+        this.margin = ({top: 30, right: 50, bottom: 30, left: 50})
         this.container = d3.select(container_name)
         this.width = this.container.node().getBoundingClientRect().width - this.margin.right;
         this.height = this.getHeight()
         this.container.style("height", (this.height + this.margin.bottom + this.margin.top) + "px");
         this.reference = data["reference"]
+        this.showLegends = showLegends;
         this.buildSVG()
         this.tooltip = d3.select(this.c_name)
             .append("div")
@@ -65,7 +66,9 @@ class LineChart {
             .attr("fill", "steelblue")
             .attr("d", area)
             .attr("fill-opacity", 0.4);
-        this.addLegend(filtered, svg, z, reference);
+        if(this.showLegends){
+            this.addLegend(filtered, svg, z, reference);
+        }
         let line_graph = svg.append("g")
             .attr("stroke-linejoin", "round")
             .attr("stroke-linecap", "round")
