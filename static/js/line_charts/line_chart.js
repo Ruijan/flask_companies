@@ -26,6 +26,7 @@ class LineChart {
     buildSVG() {
         let chart = this;
         let dates = this.getDates();
+        dates.sort(function(a,b){return a.getTime() - b.getTime() > 0;});
         let y = d3.scaleLinear().range([this.height - this.margin.bottom, this.margin.top])
         let maximum = d3.max(this.root, (d,i,value) => d3.max(d.values, (el) => el.value))
         y.domain([0, maximum]).nice()
@@ -84,29 +85,20 @@ class LineChart {
             .on('mousemove', function (actual) {
                 svg.selectAll('#vertical_limit').remove()
                 svg.selectAll('#horizontal_limit').remove()
-                const ym = y.invert(d3.mouse(this)[1]);
                 const xm = x.invert(d3.mouse(this)[0]);
-                const i1 = d3.bisectLeft(dates, xm, 1);
+                let bisectDate = d3.bisector(function(d) { return d.getTime(); }).left;
+                let currentDates = getDateForCurrentValue([actual])
+                currentDates.sort(function(a,b){return a.getTime() - b.getTime() > 0;});
+                const i1 = bisectDate(dates, xm.getTime(), 1);
+
+                const date_index = bisectDate(currentDates, xm.getTime(), 1);
                 const i0 = i1 - 1;
                 const i = xm - dates[i0] > dates[i1] - xm ? i1 : i0;
-                const date = xm.getFullYear() + "-" + (xm.getMonth()+ 1).pad(2) + "-" + xm.getDate().pad(2)
-                let i_value = -1;
-                let previous_date = -1;
-                for(let index = 0; index < chart.dates.length; ++index){
-                    let c_date = new Date(chart.dates[index])
-                    if(index === 0){
-                        previous_date = c_date;
-                    }
 
-                    if(xm > c_date && xm < previous_date){
-                        i_value = index;
-                    }
-                    previous_date = c_date;
-                }
                 //const i_value = chart.dates.indexOf(date)
                 d3.select(this).attr('stroke-width', 3)
                 svg.selectAll('#limit').remove()
-                const pos_y = y(actual.values[i_value].value)
+                const pos_y = y(actual.values[actual.values.length - date_index].value)
                 const pos_x = x(dates[i])
                 svg.append('line')
                     .attr('id', 'horizontal_limit')
@@ -125,8 +117,8 @@ class LineChart {
                 d3.select(this).moveToFront();
                 chart.tooltip
                     .html("<table><tr><td style='text-align: left;'><span style='color: black'>Date</span>: </td>" +
-                        "<td style='text-align: right;'>" + chart.dates[i_value] + "</td></tr>" +
-                            getHTMLForData(i_value, chart.root, actual.key, z, reference) + "</table>")
+                        "<td style='text-align: right;'>" + chart.dates[date_index] + "</td></tr>" +
+                            getHTMLForData(date_index, chart.root, actual.key, z, reference) + "</table>")
                     .style("top", (d3.event.pageY + 30) + "px")
                     .style("left", (d3.event.pageX + 30) + "px")
                     .style("opacity", 1)
@@ -194,14 +186,10 @@ class LineChart {
     }
 
     getDates(){
-        let dates= [];
-        this.root.forEach((d, i, value) => {
-            d.values.forEach((el) => {
-                dates.push(el["date_object"])
-            })
-        });
-        return dates;
+        return getDateForCurrentValue(this.root);
     }
+
+
 
     getUniqueDates(data){
         let dates= [];
@@ -229,6 +217,15 @@ class LineChart {
     }
 
 }
+function getDateForCurrentValue(value){
+        let dates= [];
+        value.forEach((d, i, value) => {
+            d.values.forEach((el) => {
+                dates.push(el["date_object"])
+            })
+        });
+        return dates;
+    }
 
 Number.prototype.pad = function(size) {
   var s = String(this);
