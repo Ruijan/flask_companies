@@ -6,14 +6,17 @@ from src.extractor.dividend_analyzer import get_yearly_dividends, get_dividend_f
 from datetime import datetime
 import json
 
-def display_company(db_company, ticker):
-    company_data = get_company_data(db_company, ticker)
+
+def display_company(db_company, ticker, price_cache):
+    company_data = get_company_data(db_company, ticker, price_cache)
     dividends_data = json.dumps(company_data["dividends_data"]["dividend"], indent=2)
     revenues_data = json.dumps(company_data["financial_data"]["revenue"], indent=2)
     earnings_data = json.dumps(company_data["financial_data"]["netIncome"], indent=2)
     debt_data = json.dumps(company_data["balance_sheet_data"], indent=2)
     return render_template("company.html",
                            name=company_data["name"],
+                           image=company_data["image"],
+                           price=company_data["price"],
                            ticker=company_data["ticker"],
                            sector=company_data["sector"],
                            description=company_data["description"],
@@ -25,7 +28,10 @@ def display_company(db_company, ticker):
                            last_update=company_data["last_update"])
 
 
-def get_company_data(db_company, ticker):
+def get_company_data(db_company, ticker, price_cache):
+    price_data = price_cache.get(ticker, period="1y").to_dict()
+    close_price = {"values": [{"value": price_data["Close"][date], "date": date.strftime("%Y-%m-%d")} for date in price_data["Close"]], 'key': 'Close Price'}
+    volume_price = {"values": [{"value": price_data["Close"][date], "date": date.strftime("%Y-%m-%d")} for date in price_data["Volume"]], 'key': 'Volume'}
     assets = {"values": [{"date": statement["date"], "value": statement["totalStockholdersEquity"]} for statement in
                          db_company["balance_sheet"]], "key": "Equity"}
     debt = {"values": [{"date": statement["date"], "value": statement["totalDebt"]} for statement in
@@ -42,12 +48,14 @@ def get_company_data(db_company, ticker):
     features["continuous_dividend_growth"] = str(dividend_features["continuous_dividend_growth"])
     features["div_score"] = "{:20,.0f}".format(dividend_features["div_score"] * 100)
     news = db_company["news"] if "news" in db_company else {}
-
     company_data = {"name": db_company["name"],
                     "ticker": ticker,
+                    "image": db_company["profile"]["image"],
+                    "price": db_company["profile"]["price"],
                     "news": news,
                     "sector": db_company["sector"],
                     "description": db_company["profile"]["description"],
+                    "price_data": {"data": [close_price, volume_price], "reference": "Volume"},
                     "financial_data": get_yearly_hierarchical_data(db_company["finances"], ["revenue", "netIncome"],
                                                                    'sum'),
                     "balance_sheet_data": {"data": [assets, debt], "reference": "Equity"},

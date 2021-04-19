@@ -30,6 +30,7 @@ from src.user.registor import RegistratorFactory
 from rq import Queue
 from worker import conn
 import json
+import fmpsdk
 
 print("Creating Worker")
 worker_queue = Queue(connection=conn)
@@ -151,7 +152,18 @@ def fetch_company_data(ticker):
     db_company = companies_cache.get(ticker)
     try:
         update_company_infos(companies_cache, ticker)
-        data = get_company_data(db_company, ticker)
+        data = get_company_data(db_company, ticker, history_cache)
+    except BadTicker as e:
+        data = {"Error": e.message}
+    return json.dumps(data, indent=2)
+
+
+@app.route('/quote-api/<ticker>')
+def get_ticker_quote(ticker):
+    try:
+        data = fmpsdk.quote(apikey=os.environ["FINANCE_KEY"], symbol=ticker)
+        if len(data) == 0:
+            raise BadTicker(ticker)
     except BadTicker as e:
         data = {"Error": e.message}
     return json.dumps(data, indent=2)

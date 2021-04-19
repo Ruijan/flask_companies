@@ -158,6 +158,10 @@ html::after {
     background-color: black;
 }
 
+#description_jinja{
+    font-size: 1.2em;
+}
+
 .company_name_datalist{
     font-size: 0.90em;
 }
