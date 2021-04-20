@@ -169,6 +169,23 @@ def get_ticker_quote(ticker):
     return json.dumps(data, indent=2)
 
 
+@app.route('/historical-price-api/<ticker>/<period>')
+def get_ticker_historical_price(ticker, period):
+    try:
+        valid_periods = ["1d", "1w", "1m", "6m", "1y", "5y", "10y", "max"]
+        if period not in valid_periods:
+            raise BadTicker(period)  # TODO add new exception for bad period
+        price_data = history_cache.get(ticker, period=period).to_dict()
+        close_price = {"values": [{"value": price_data["Close"][date], "date": date.strftime("%Y-%m-%d")} for date in
+                                  price_data["Close"]], 'key': 'Close Price'}
+        data = {"data": [close_price], "reference": "Close Price"}
+        if len(data) == 0:
+            raise BadTicker(ticker)
+    except BadTicker as e:
+        data = {"Error": e.message}
+    return json.dumps(data, indent=2)
+
+
 @app.route('/screener/<ticker>')
 def show_company(ticker):
     if ticker == "":
@@ -386,7 +403,7 @@ def import_portfolio():
         ticker = products[str(movement["productId"])]["symbol"]
         currency = products[str(movement["productId"])]["currency"]
         name = products[str(movement["productId"])]["name"].lower()
-        indexes = [index for index in range(len(modified_tickers)) if modified_tickers[index] == ticker ]
+        indexes = [index for index in range(len(modified_tickers)) if modified_tickers[index] == ticker]
         if len(indexes) > 0:
             for index in indexes:
                 country = tickers["Country"][index]
@@ -411,7 +428,6 @@ def import_portfolio():
         portfolio.add_transaction(movement, history_cache, companies_cache)
     update_portfolio(portfolio)
     return redirect(url_for("show_portfolio_manager"))
-
 
 
 if __name__ == '__main__':

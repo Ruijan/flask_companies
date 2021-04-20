@@ -31,7 +31,6 @@ def display_company(db_company, ticker, price_cache):
 def get_company_data(db_company, ticker, price_cache):
     price_data = price_cache.get(ticker, period="1y").to_dict()
     close_price = {"values": [{"value": price_data["Close"][date], "date": date.strftime("%Y-%m-%d")} for date in price_data["Close"]], 'key': 'Close Price'}
-    volume_price = {"values": [{"value": price_data["Close"][date], "date": date.strftime("%Y-%m-%d")} for date in price_data["Volume"]], 'key': 'Volume'}
     assets = {"values": [{"date": statement["date"], "value": statement["totalStockholdersEquity"]} for statement in
                          db_company["balance_sheet"]], "key": "Equity"}
     debt = {"values": [{"date": statement["date"], "value": statement["totalDebt"]} for statement in
@@ -55,7 +54,7 @@ def get_company_data(db_company, ticker, price_cache):
                     "news": news,
                     "sector": db_company["sector"],
                     "description": db_company["profile"]["description"],
-                    "price_data": {"data": [close_price, volume_price], "reference": "Volume"},
+                    "price_data": {"data": [close_price], "reference": "Close Price"},
                     "financial_data": get_yearly_hierarchical_data(db_company["finances"], ["revenue", "netIncome"],
                                                                    'sum'),
                     "balance_sheet_data": {"data": [assets, debt], "reference": "Equity"},
