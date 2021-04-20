@@ -166,18 +166,16 @@ class LocalHistoryCache(dict):
 
                     df = pd.DataFrame(price_history.values(), index=list(price_history.keys()), columns=["Close"])
                     df2 = pd.DataFrame(dividends_history.values(), index=list(dividends_history.keys()), columns=["Dividends"])
-                    result = pd.concat([df, df2], axis=1, sort=False)
-                    result = result.fillna(method='ffill')
-                    added_history = result.fillna(method='bfill')
+                    added_history = pd.concat([df, df2], axis=1, sort=False)
                     added_history.index.name = "Date"
                     added_history.index = pd.to_datetime(added_history.index)
+                    added_history.sort_index(inplace=True)
                 else:
                     added_history = yf.Ticker(key).history(start=start_date,
                                                            end=self[key]["start_date"] - timedelta(days=1))
                 temp_data["history"].index = pd.to_datetime(temp_data["history"].index)
                 temp_data["history"] = temp_data["history"].append(added_history).sort_values(by=["Date"],
                                                                                               ascending=True)
-
                 temp_data["start_date"] = start_date
         temp_data["history"]["Close"] = temp_data["history"]["Close"].fillna(method='ffill').fillna(method='bfill')
         temp_data["history"] = temp_data["history"].loc[~temp_data["history"].index.duplicated(keep='first')]
