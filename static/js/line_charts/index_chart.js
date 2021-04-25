@@ -1,4 +1,5 @@
 class IndexChart {
+    duration = 500;
     constructor(container_name, data, margin = ({top: 30, right: 30, bottom: 30, left: 30})) {
         this.root = this.transformData(data)
         this.c_name = container_name
@@ -65,6 +66,7 @@ class IndexChart {
             .attr("stroke-linecap", "round")
             .attr("stroke", d => z(d.key))
             .attr("d", d => line(d.values));
+
 
         serie.append("text")
             .datum(d => ({key: d.key, value: d.values[d.values.length - 1].value}))

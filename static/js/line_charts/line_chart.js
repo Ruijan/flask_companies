@@ -62,7 +62,7 @@ class LineChart {
         let reference = this.root.find(el => el.key == this.reference);
         let reference_name = this.reference;
         var filtered = this.root.filter(function(value, index, arr){ return value.key !== reference_name;});
-        svg.append("path")
+        let path = svg.append("path")
             .datum(reference.values)
             .attr("fill", "steelblue")
             .attr("d", area)
@@ -81,7 +81,19 @@ class LineChart {
             .attr("stroke-width", 2)
             .attr("stroke", d => z(d.key))
             .attr("fill", "none")
-            .attr('id', d => d.key)
+            .attr('id', d => d.key);
+        for(let i = 0; i < this.root.length; i++){
+            svg.append('circle')
+                .attr("id", 'circle_' + i.toString())
+                .style("fill", "none")
+                .attr("stroke", z(this.root[i].key))
+                .attr('r', 8.5)
+                .attr('cx', 0)
+                .attr('cy', 0)
+                .attr('opacity', 0)
+        }
+
+
         svg.on('mousemove', function () {
                 svg.selectAll('#vertical_limit').remove()
                 svg.selectAll('#horizontal_limit').remove()
@@ -91,7 +103,7 @@ class LineChart {
                 for(let index in chart.root){
                     let currentDates = getDateForCurrentValue([chart.root[index]])
                     currentDates.sort(function(a,b){return a.getTime() - b.getTime() > 0;});
-                    indices.push(chart.root[index].values.length - bisectDate(currentDates, xm.getTime(), 1));
+                    indices.push(bisectDate(currentDates, xm.getTime(), 1));
                 }
 
                 const i1 = bisectDate(dates, xm.getTime(), 1);
@@ -104,6 +116,7 @@ class LineChart {
                 d3.select(this).attr('stroke-width', 3)
                 svg.selectAll('#limit').remove()
                 const pos_x = x(dates[i])
+
                 svg.append('line')
                     .attr("id", 'vertical_limit')
                     .attr('x1', pos_x)
@@ -111,6 +124,15 @@ class LineChart {
                     .attr('x2', pos_x)
                     .attr('y2', chart.height - chart.margin.top )
                     .attr('stroke', 'red')
+                for(let i = 0; i < chart.root.length; i++){
+                    let value = chart.root[i].values[indices[i]].value;
+                    const pos_y = y(value);
+                    svg.selectAll('#circle_' + i.toString())
+                        .attr('cx', pos_x)
+                        .attr('cy', pos_y)
+                        .attr('opacity', 1)
+                }
+
                 d3.select(this).moveToFront();
                 chart.tooltip
                     .html("<table><tr><td style='text-align: left;'><span style='color: black'>Date</span>: </td>" +
@@ -148,6 +170,12 @@ class LineChart {
 
         svg.append("g")
             .call(yAxis);
+        var brush = d3.brushX().extent( [ [0,0], [chart.width,chart.height] ] )
+        svg.append("g").attr("class", "brush").call(brush);
+    }
+
+    updateChart(){
+        let extent = d3.event.selection
     }
 
     addLegend(filtered, svg, z, reference) {
@@ -206,6 +234,9 @@ class LineChart {
                 const date = parseDate(el["date"]);
                 el["date_object"] = date
             })
+            d.values.sort(function(first, second) {
+              return first.date_object.getTime() - second.date_object.getTime();
+            });
         });
         return data;
     };
