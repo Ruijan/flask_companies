@@ -62,7 +62,6 @@ class CompaniesCache(dict):
                 company = dict()
                 company["last_update"] = today - timedelta(360)
             company["last_checked"] = today
-
             self[key] = company
 
     def should_update_company(self, key, today):

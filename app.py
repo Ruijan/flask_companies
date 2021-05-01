@@ -11,7 +11,7 @@ from src.brokers.degiro import Degiro
 from src.cache.companies_cache import CompaniesCache, fetch_company_from_api
 from src.cache.error.bad_ticker import BadTicker
 from src.currency import Currency
-from src.displayer.company_displayer import display_company, get_company_data
+from src.displayer.company_displayer import get_company_data, get_category_aggregated_data
 from all_functions import print_companies_to_html
 from cryptography.fernet import Fernet
 from datetime import datetime
@@ -153,6 +153,8 @@ def fetch_company_data(ticker):
     try:
         update_company_infos(companies_cache, ticker)
         data = get_company_data(db_company, ticker, history_cache)
+        data["sector_stats"] = get_category_aggregated_data("profile.sector", db_company["profile"]["sector"], mongo.db.cleaned_companies)
+        data["industry_stats"] = get_category_aggregated_data("profile.industry", db_company["profile"]["industry"], mongo.db.cleaned_companies)
     except BadTicker as e:
         data = {"Error": e.message}
     return json.dumps(data, indent=2)

@@ -23,7 +23,7 @@
 
     <script type="text/javascript" src="../static/js/main.js"></script>
     <script type="text/javascript" src="../static/vendor/jquery/jquery-3.2.1.min.js"></script>
-    <script type="text/javascript" src="../static/vendor/bootstrap/js/bootstrap.js"></script>
+    <script type="text/javascript" src="../static/vendor/bootstrap/js/bootstrap.bundle.js"></script>
 
     <script>
         var tickers = {{ tickers | safe }};
@@ -71,6 +71,19 @@
                     <button class="tablinks" onclick="openTab('dividends_button', 'Dividends'); onOpenDividends();" id="dividends_button">Dividends</button>
                 </div>
                 <div id="Summary" class="tabcontent" style="display: block;">
+                    <h2>Value</h2>
+                    <table class="div_info">
+                        <tr>
+                            <th><h5><span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Price/Earnings Ratio">Price/Earnings</span></h5></th>
+                            <th><h5><span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Price/Book value Ratio">Price/Book value</span></h5></th>
+                            <th><h5><span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Price/Cash flow Ratio">Price/Cash flow</span></h5></th>
+                        </tr>
+                        <tr>
+                            <td><h4><span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Price/Earnings Ratio" id="pe_jinja"></span></h4></td>
+                            <td><h4><span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Price/Earnings Ratio" id="pb_jinja"></span></h4></td>
+                            <td><h4><span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Price/Earnings Ratio" id="pfc_jinja"></span></h4></td>
+                        </tr>
+                    </table>
                     <h2>Historical Prices</h2>
                     <div class="btn-group" role="group" aria-label="Time period" id="time-period-price">
                         <button type="button" class="btn btn-secondary" onclick="updateHistoricalPrices('1d');" id="1d">Today</button>
@@ -132,7 +145,9 @@
 </html>
 
 <script>
-   
+   $(function () {
+      $('[data-toggle="tooltip"]').tooltip()
+    })
     let tabcontent = document.getElementsByClassName("tabcontent");
     for (let i = 0; i < tabcontent.length; i++) {
         tabcontent[i].style.display = "none";
@@ -155,6 +170,12 @@
         document.getElementById("sector_jinja").innerText = data["sector"]
         document.getElementById("description_jinja").innerText = data["description"]
         document.getElementById("price_jinja").innerText = data["price"]
+        document.getElementById("pe_jinja").innerText = data["value_data"]["pe"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
+        document.getElementById("pe_jinja").title = "Sector Average: " + data["sector_stats"]["avgPERatio"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
+        document.getElementById("pb_jinja").innerText = data["value_data"]["pb"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
+        document.getElementById("pb_jinja").title = "Sector Average: " + data["sector_stats"]["avgPBRatio"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
+        document.getElementById("pfc_jinja").innerText = data["value_data"]["pfcf"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
+        document.getElementById("pfc_jinja").title = "Sector Average: " + data["sector_stats"]["avgPFCRatio"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
         document.getElementById("image_jinja").src = data["image"]
         let newsLength = data["news"].length < 10 ? data["news"].length : 10;
         let newsHTML ="<div class='row row-cols-1 row-cols-md-3 g-4'>"

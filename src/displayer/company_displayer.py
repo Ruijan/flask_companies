@@ -29,6 +29,7 @@ def display_company(db_company, ticker, price_cache):
 
 
 def get_company_data(db_company, ticker, price_cache):
+
     price_data = price_cache.get(ticker, period="1y").to_dict()
     close_price = {"values": [{"value": price_data["Close"][date], "date": date.strftime("%Y-%m-%d")} for date in price_data["Close"]], 'key': 'Close Price'}
     assets = {"values": [{"date": statement["date"], "value": statement["totalStockholdersEquity"]} for statement in
@@ -55,6 +56,7 @@ def get_company_data(db_company, ticker, price_cache):
                     "sector": db_company["sector"],
                     "description": db_company["profile"]["description"],
                     "price_data": {"data": [close_price], "reference": "Close Price"},
+                    "value_data": {"pe": db_company["stats"]["peRatio"], "pb": db_company["stats"]["pbRatio"], "pfcf": db_company["stats"]["pfcfRatio"]},
                     "financial_data": get_yearly_hierarchical_data(db_company["finances"], ["revenue", "netIncome"],
                                                                    'sum'),
                     "balance_sheet_data": {"data": [assets, debt], "reference": "Equity"},
@@ -115,3 +117,33 @@ def plotHistoricalData(data, title, variable_name, display_format):
     p.yaxis.major_label_text_color = "cornsilk"
     script, div = components(p)
     return div, script
+
+
+def get_category_aggregated_data(category, value, db):
+    data = list(db.aggregate([
+        {
+            '$match': {
+                'stats.peRatio': {
+                    '$gt': 0
+                },
+                category: value
+            }
+        }, {
+            '$group': {
+                '_id': '$sector',
+                'avgPERatio': {
+                    '$avg': '$stats.peRatio'
+                },
+                'avgPBRatio': {
+                    '$avg': '$stats.pbRatio'
+                },
+                'avgPFCRatio': {
+                    '$avg': '$stats.pfcfRatio'
+                },
+                'count': {
+                    '$sum': 1
+                }
+            }
+        }
+    ]))
+    return data[0]
