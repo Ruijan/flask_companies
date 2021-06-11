@@ -26,6 +26,7 @@ class LineChart {
     buildSVG() {
         let chart = this;
         let dates = this.getDates();
+        dates.sort(function(a,b){return a.getTime() - b.getTime() > 0;});
         let y = d3.scaleLinear().range([this.height - this.margin.bottom, this.margin.top])
         let maximum = d3.max(this.root, (d,i,value) => d3.max(d.values, (el) => el.value))
         y.domain([0, maximum]).nice()
@@ -61,7 +62,7 @@ class LineChart {
         let reference = this.root.find(el => el.key == this.reference);
         let reference_name = this.reference;
         var filtered = this.root.filter(function(value, index, arr){ return value.key !== reference_name;});
-        svg.append("path")
+        let path = svg.append("path")
             .datum(reference.values)
             .attr("fill", "steelblue")
             .attr("d", area)
@@ -80,41 +81,42 @@ class LineChart {
             .attr("stroke-width", 2)
             .attr("stroke", d => z(d.key))
             .attr("fill", "none")
-            .attr('id', d => d.key)
-            .on('mousemove', function (actual) {
+            .attr('id', d => d.key);
+        for(let i = 0; i < this.root.length; i++){
+            svg.append('circle')
+                .attr("id", 'circle_' + i.toString())
+                .style("fill", "none")
+                .attr("stroke", z(this.root[i].key))
+                .attr('r', 8.5)
+                .attr('cx', 0)
+                .attr('cy', 0)
+                .attr('opacity', 0)
+        }
+
+
+        svg.on('mousemove', function () {
                 svg.selectAll('#vertical_limit').remove()
                 svg.selectAll('#horizontal_limit').remove()
-                const ym = y.invert(d3.mouse(this)[1]);
                 const xm = x.invert(d3.mouse(this)[0]);
-                const i1 = d3.bisectLeft(dates, xm, 1);
+                let bisectDate = d3.bisector(function(d) { return d.getTime(); }).left;
+                let indices = [];
+                for(let index in chart.root){
+                    let currentDates = getDateForCurrentValue([chart.root[index]])
+                    currentDates.sort(function(a,b){return a.getTime() - b.getTime() > 0;});
+                    indices.push(bisectDate(currentDates, xm.getTime(), 1));
+                }
+
+                const i1 = bisectDate(dates, xm.getTime(), 1);
+
+
                 const i0 = i1 - 1;
                 const i = xm - dates[i0] > dates[i1] - xm ? i1 : i0;
-                const date = xm.getFullYear() + "-" + (xm.getMonth()+ 1).pad(2) + "-" + xm.getDate().pad(2)
-                let i_value = -1;
-                let previous_date = -1;
-                for(let index = 0; index < chart.dates.length; ++index){
-                    let c_date = new Date(chart.dates[index])
-                    if(index === 0){
-                        previous_date = c_date;
-                    }
 
-                    if(xm > c_date && xm < previous_date){
-                        i_value = index;
-                    }
-                    previous_date = c_date;
-                }
                 //const i_value = chart.dates.indexOf(date)
                 d3.select(this).attr('stroke-width', 3)
                 svg.selectAll('#limit').remove()
-                const pos_y = y(actual.values[i_value].value)
                 const pos_x = x(dates[i])
-                svg.append('line')
-                    .attr('id', 'horizontal_limit')
-                    .attr('x1', chart.margin.left)
-                    .attr('y1', pos_y)
-                    .attr('x2', chart.width - chart.margin.left)
-                    .attr('y2', pos_y)
-                    .attr('stroke', 'red')
+
                 svg.append('line')
                     .attr("id", 'vertical_limit')
                     .attr('x1', pos_x)
@@ -122,11 +124,20 @@ class LineChart {
                     .attr('x2', pos_x)
                     .attr('y2', chart.height - chart.margin.top )
                     .attr('stroke', 'red')
+                for(let i = 0; i < chart.root.length; i++){
+                    let value = chart.root[i].values[indices[i]].value;
+                    const pos_y = y(value);
+                    svg.selectAll('#circle_' + i.toString())
+                        .attr('cx', pos_x)
+                        .attr('cy', pos_y)
+                        .attr('opacity', 1)
+                }
+
                 d3.select(this).moveToFront();
                 chart.tooltip
                     .html("<table><tr><td style='text-align: left;'><span style='color: black'>Date</span>: </td>" +
-                        "<td style='text-align: right;'>" + chart.dates[i_value] + "</td></tr>" +
-                            getHTMLForData(i_value, chart.root, actual.key, z, reference) + "</table>")
+                        "<td style='text-align: right;'>" + chart.dates[indices[0]] + "</td></tr>" +
+                            getHTMLForData(indices, chart.root, z, reference) + "</table>")
                     .style("top", (d3.event.pageY + 30) + "px")
                     .style("left", (d3.event.pageX + 30) + "px")
                     .style("opacity", 1)
@@ -135,15 +146,16 @@ class LineChart {
             .on('mouseleave', function (){
                 d3.select(this).attr("stroke-width", 2)
                 svg.selectAll('#vertical_limit').remove()
-                svg.selectAll('#horizontal_limit').remove()
                 d3.select(this).moveToBack()
                 chart.tooltip
                 .style("opacity", 0)
                 });
         let xAxis = g => g
+            .style("font", "14px sans-serif")
             .attr("transform", `translate(0,${this.height - this.margin.bottom})`)
             .call(d3.axisBottom(x).ticks(this.width / 80).tickSizeOuter(0))
         let yAxis = g => g
+            .style("font", "14px sans-serif")
             .attr("transform", `translate(${this.margin.left},0)`)
             .call(d3.axisLeft(y).ticks(this.height / 80, "s").tickFormat(function(d){return d3.format(".2s")(d).replace(/G/, "B")}))
             .call(g => g.select(".domain").remove())
@@ -158,6 +170,12 @@ class LineChart {
 
         svg.append("g")
             .call(yAxis);
+        var brush = d3.brushX().extent( [ [0,0], [chart.width,chart.height] ] )
+        svg.append("g").attr("class", "brush").call(brush);
+    }
+
+    updateChart(){
+        let extent = d3.event.selection
     }
 
     addLegend(filtered, svg, z, reference) {
@@ -194,14 +212,10 @@ class LineChart {
     }
 
     getDates(){
-        let dates= [];
-        this.root.forEach((d, i, value) => {
-            d.values.forEach((el) => {
-                dates.push(el["date_object"])
-            })
-        });
-        return dates;
+        return getDateForCurrentValue(this.root);
     }
+
+
 
     getUniqueDates(data){
         let dates= [];
@@ -220,6 +234,9 @@ class LineChart {
                 const date = parseDate(el["date"]);
                 el["date_object"] = date
             })
+            d.values.sort(function(first, second) {
+              return first.date_object.getTime() - second.date_object.getTime();
+            });
         });
         return data;
     };
@@ -229,6 +246,15 @@ class LineChart {
     }
 
 }
+function getDateForCurrentValue(value){
+        let dates= [];
+        value.forEach((d, i, value) => {
+            d.values.forEach((el) => {
+                dates.push(el["date_object"])
+            })
+        });
+        return dates;
+    }
 
 Number.prototype.pad = function(size) {
   var s = String(this);
@@ -236,19 +262,17 @@ Number.prototype.pad = function(size) {
   return s;
 }
 
-function getHTMLForData(i_value, data, current_key, z, reference){
+function getHTMLForData(indices, data, z, reference){
     let formatValue = x => isNaN(x) ? "N/A" : (Math.round(x * 100) / 100).toLocaleString("en")
     let html = ""
-    for(index in data){
+    for(let index in data){
         let series = data[index]
         const color = series.key === reference.key ? "steelblue": z(series.key)
         html += "<tr>"
         html += "<td style='text-align: left;'>"
-        html += current_key === series.key ? "<strong>" : ""
         html += "<span style='color: " + color + "'>" + series.key.replace(/^\w/, c => c.toUpperCase()).replace("_", " ") + "</span>: "
-        html += current_key === series.key ? "</strong>" : ""
         html += "</td>"
-        html += "<td style='text-align: right;'>" + formatValue(series.values[i_value].value) + "</td>"
+        html += "<td style='text-align: right;'>" + formatValue(series.values[indices[index]].value) + "</td>"
         html += "</tr>"
     }
     return html

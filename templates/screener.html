@@ -23,7 +23,7 @@
 
     <script type="text/javascript" src="../static/js/main.js"></script>
     <script type="text/javascript" src="../static/vendor/jquery/jquery-3.2.1.min.js"></script>
-    <script type="text/javascript" src="../static/vendor/bootstrap/js/bootstrap.js"></script>
+    <script type="text/javascript" src="../static/vendor/bootstrap/js/bootstrap.bundle.js"></script>
 
     <script>
         var tickers = {{ tickers | safe }};
@@ -50,16 +50,16 @@
             <div class="loader" style="display: none;"></div>
             <div id="error" class="collapse alert alert-danger"><div class="error-content"><span>No company found for ticker: BXND</span></div></div>
             <div id="company_data" class="data_content collapse mb-5">
-                <div class="card text-white bg-dark" style="width: 100%;">
+                <div class="card text-white bg-dark border-0" style="width: 100%; ">
                     <div class="row g-0">
                         <div class="col-md-3 d-flex flex-wrap align-items-center justify-content-center">
                             <img src="" alt="" id="image_jinja" style="width: 50%;"/>
                         </div>
                         <div class="col-md-8">
                             <div class="card-body">
-                                <h1><span id="name_jinja"></span> (<span id="ticker_jinja"></span>)</h1>
-                                <h2 id="sector_jinja"></h2>
-                                <h2 id="price_jinja"></h2>
+                                <h2><span id="name_jinja"></span> (<span id="ticker_jinja"></span>)</h2>
+                                <h3 id="sector_jinja"></h3>
+                                <h3 id="price_jinja"></h3>
                                 <div id="last_update_jinja"></div>
                             </div>
                         </div>
@@ -71,7 +71,30 @@
                     <button class="tablinks" onclick="openTab('dividends_button', 'Dividends'); onOpenDividends();" id="dividends_button">Dividends</button>
                 </div>
                 <div id="Summary" class="tabcontent" style="display: block;">
+                    <h2>Value</h2>
+                    <table class="div_info">
+                        <tr>
+                            <th><h5><span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Price/Earnings Ratio">Price/Earnings</span></h5></th>
+                            <th><h5><span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Price/Book value Ratio">Price/Book value</span></h5></th>
+                            <th><h5><span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Price/Cash flow Ratio">Price/Cash flow</span></h5></th>
+                        </tr>
+                        <tr>
+                            <td><h4><span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Price/Earnings Ratio" id="pe_jinja"></span></h4></td>
+                            <td><h4><span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Price/Earnings Ratio" id="pb_jinja"></span></h4></td>
+                            <td><h4><span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Price/Earnings Ratio" id="pfc_jinja"></span></h4></td>
+                        </tr>
+                    </table>
                     <h2>Historical Prices</h2>
+                    <div class="btn-group" role="group" aria-label="Time period" id="time-period-price">
+                        <button type="button" class="btn btn-secondary" onclick="updateHistoricalPrices('1d');" id="1d">Today</button>
+                        <button type="button" class="btn btn-secondary" onclick="updateHistoricalPrices('1w');" id="1w">1 Week</button>
+                        <button type="button" class="btn btn-secondary" onclick="updateHistoricalPrices('1m');"id="1m">1 Month</button>
+                        <button type="button" class="btn btn-secondary" onclick="updateHistoricalPrices('6m');" id="6m">6 Months</button>
+                        <button type="button" class="btn btn-secondary active" onclick="updateHistoricalPrices('1y');" id="1y">1 Year</button>
+                        <button type="button" class="btn btn-secondary" onclick="updateHistoricalPrices('5y');" id="5y">5 Years</button>
+                        <button type="button" class="btn btn-secondary" onclick="updateHistoricalPrices('10y');" id="10y">10 Years</button>
+                        <button type="button" class="btn btn-secondary" onclick="updateHistoricalPrices('max');" id="max">Max</button>
+                    </div>
                     <div id="container_historical_prices"></div>
                     <h2>Description</h2>
                     <p id="description_jinja"></p>
@@ -122,13 +145,16 @@
 </html>
 
 <script>
-   
+   $(function () {
+      $('[data-toggle="tooltip"]').tooltip()
+    })
     let tabcontent = document.getElementsByClassName("tabcontent");
     for (let i = 0; i < tabcontent.length; i++) {
         tabcontent[i].style.display = "none";
     }
     var company_data = [];
     var timerID = -1;
+    let currentTicker = "";
     function displayData(data){
         document.getElementById("div_score_jinja").innerText = data["dividend_features"]["div_score"]
         document.getElementById("div_yield_jinja").innerText = data["dividend_features"]["div_yield"]
@@ -144,6 +170,12 @@
         document.getElementById("sector_jinja").innerText = data["sector"]
         document.getElementById("description_jinja").innerText = data["description"]
         document.getElementById("price_jinja").innerText = data["price"]
+        document.getElementById("pe_jinja").innerText = data["value_data"]["pe"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
+        document.getElementById("pe_jinja").setAttribute("data-bs-original-title", "Sector Average: " + data["sector_stats"]["avgPERatio"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1}))
+        document.getElementById("pb_jinja").innerText = data["value_data"]["pb"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
+        document.getElementById("pb_jinja").setAttribute("data-bs-original-title","Sector Average: " + data["sector_stats"]["avgPBRatio"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1}))
+        document.getElementById("pfc_jinja").innerText = data["value_data"]["pfcf"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
+        document.getElementById("pfc_jinja").setAttribute("data-bs-original-title","Sector Average: " + data["sector_stats"]["avgPFCRatio"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1}))
         document.getElementById("image_jinja").src = data["image"]
         let newsLength = data["news"].length < 10 ? data["news"].length : 10;
         let newsHTML ="<div class='row row-cols-1 row-cols-md-3 g-4'>"
@@ -218,6 +250,7 @@
         let ticker = document.getElementById("ticker_input").value.toUpperCase();
         let ticker_length = ticker.length;
         ticker = ticker.substring(0, ticker_length < 8 ? ticker_length : 8);
+        currentTicker = ticker;
         var request = new Request('/screener-api/' + ticker);
         var data = [];
         fetch(request).then(function(response) {
@@ -245,6 +278,18 @@
             }
         });
         
+    }
+
+    function updateHistoricalPrices(period){
+        let request = new Request('/historical-price-api/' + currentTicker + "/" + period);
+        $("#time-period-price>button.active").removeClass("active");
+        $("#" + period).addClass("active");
+        fetch(request).then(function(response) {
+            return response.text();
+        }).then(function(text) {
+            company_data["price_data"] = JSON.parse(text);
+            onOpenSummary();
+        });
     }
     
     let tabbuttons = document.getElementsByClassName("tablinks");

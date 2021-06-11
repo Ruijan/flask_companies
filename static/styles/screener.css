@@ -8,7 +8,9 @@
     border-radius: 9999em;
 
 }
-
+.bg-dark{
+    background-color: rgb(32, 29, 38) !important;
+}
 .input span {
     transform: scale(.993, .94);
     transition: transform .5s, opacity .25s;

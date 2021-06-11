@@ -11,7 +11,7 @@ from src.brokers.degiro import Degiro
 from src.cache.companies_cache import CompaniesCache, fetch_company_from_api
 from src.cache.error.bad_ticker import BadTicker
 from src.currency import Currency
-from src.displayer.company_displayer import display_company, get_company_data
+from src.displayer.company_displayer import get_company_data, get_category_aggregated_data
 from all_functions import print_companies_to_html
 from cryptography.fernet import Fernet
 from datetime import datetime
@@ -153,6 +153,8 @@ def fetch_company_data(ticker):
     try:
         update_company_infos(companies_cache, ticker)
         data = get_company_data(db_company, ticker, history_cache)
+        data["sector_stats"] = get_category_aggregated_data("profile.sector", db_company["profile"]["sector"], mongo.db.cleaned_companies)
+        data["industry_stats"] = get_category_aggregated_data("profile.industry", db_company["profile"]["industry"], mongo.db.cleaned_companies)
     except BadTicker as e:
         data = {"Error": e.message}
     return json.dumps(data, indent=2)
@@ -162,6 +164,23 @@ def fetch_company_data(ticker):
 def get_ticker_quote(ticker):
     try:
         data = fmpsdk.quote(apikey=os.environ["FINANCE_KEY"], symbol=ticker)
+        if len(data) == 0:
+            raise BadTicker(ticker)
+    except BadTicker as e:
+        data = {"Error": e.message}
+    return json.dumps(data, indent=2)
+
+
+@app.route('/historical-price-api/<ticker>/<period>')
+def get_ticker_historical_price(ticker, period):
+    try:
+        valid_periods = ["1d", "1w", "1m", "6m", "1y", "5y", "10y", "max"]
+        if period not in valid_periods:
+            raise BadTicker(period)  # TODO add new exception for bad period
+        price_data = history_cache.get(ticker, period=period).to_dict()
+        close_price = {"values": [{"value": price_data["Close"][date], "date": date.strftime("%Y-%m-%d")} for date in
+                                  price_data["Close"]], 'key': 'Close Price'}
+        data = {"data": [close_price], "reference": "Close Price"}
         if len(data) == 0:
             raise BadTicker(ticker)
     except BadTicker as e:
@@ -386,7 +405,7 @@ def import_portfolio():
         ticker = products[str(movement["productId"])]["symbol"]
         currency = products[str(movement["productId"])]["currency"]
         name = products[str(movement["productId"])]["name"].lower()
-        indexes = [index for index in range(len(modified_tickers)) if modified_tickers[index] == ticker ]
+        indexes = [index for index in range(len(modified_tickers)) if modified_tickers[index] == ticker]
         if len(indexes) > 0:
             for index in indexes:
                 country = tickers["Country"][index]
@@ -411,7 +430,6 @@ def import_portfolio():
         portfolio.add_transaction(movement, history_cache, companies_cache)
     update_portfolio(portfolio)
     return redirect(url_for("show_portfolio_manager"))
-
 
 
 if __name__ == '__main__':

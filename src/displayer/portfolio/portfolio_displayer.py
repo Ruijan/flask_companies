@@ -20,6 +20,7 @@ import matplotlib.cm
 from bokeh.models import ColorBar, LogColorMapper, LogTicker, LinearColorMapper, BasicTicker
 import time
 
+
 def get_portfolio_context(portfolio, tickers, tab):
     is_empty = not portfolio.transactions
     request_start = time.time()
@@ -29,7 +30,8 @@ def get_portfolio_context(portfolio, tickers, tab):
     context.update(get_all_price_change(portfolio.history, is_empty, portfolio))
     context.update(get_portfolio_info(portfolio))
     context.update(get_growth_plot(portfolio.positions, portfolio.history, is_empty))
-    context.update(get_dividends_plots(portfolio.positions, portfolio.history, portfolio.dividend_transactions, is_empty))
+    context.update(
+        get_dividends_plots(portfolio.positions, portfolio.history, portfolio.dividend_transactions, is_empty))
     context["portfolio"] = get_portfolio_summary_table(portfolio.positions, portfolio.currency)
     context["upcoming_dividends"] = get_upcoming_dividends(portfolio.positions, portfolio.currency)
     context["transactions"] = get_transaction_table(portfolio)
@@ -51,7 +53,8 @@ def get_upcoming_dividends(summary, currency):
     today = today.replace(hour=0, minute=0, second=0, microsecond=0)
 
     upcoming_dividends = [{"ticker": key,
-                           "amount": format_currency(position["dividends"] / position["dividend_frequency"], currency.short,
+                           "amount": format_currency(position["dividends"] / position["dividend_frequency"],
+                                                     currency.short,
                                                      locale='en_US'),
                            "date": (position["ex_dividend_date"] - today).days}
                           for key, position in summary.items() if
@@ -213,7 +216,8 @@ def create_dividend_history(hist):
     max_date = datetime(today.year, 12, 1)
     if not hist.empty:
         min_date = min(hist.index)
-        max_date = datetime(today.year + math.floor((today.month + 6)/12), (today.month + 6)%12, 1)
+        max_month = (today.month + 6) if (today.month + 6) <= 12 else (today.month + 6) % 13 + 1
+        max_date = datetime(today.year + math.floor((today.month + 6) / 13),  max_month, 1)
     history = [({"tax": 0, "date": c_date, "net_amount": 0}) for c_date in
                get_list_of_dates_per_month(min_date, max_date)]
     for index, row in hist.iterrows():
@@ -519,9 +523,13 @@ def get_portfolio_history(hist):
         ratio_close = ratio_close.values.flatten().tolist()
         ratio_sp500 = ratio_sp500.values.flatten().tolist()
     dates = [dates[index].strftime("%Y-%m-%d") for index in range(len(dates))]
-    data = {"data": [{"key": "Close", "values": [{"date": dates[index], "value": close_price[index]} for index in range(len(amount))]},
-            {"key": "SP500", "values": [{"date": dates[index], "value": sp500[index]} for index in range(len(amount))]},
-            {"key": "Invested", "values": [{"date": dates[index], "value": amount[index]} for index in range(len(amount))]}], "reference": "Invested"}
+    data = {"data": [{"key": "Close",
+                      "values": [{"date": dates[index], "value": close_price[index]} for index in range(len(amount))]},
+                     {"key": "SP500",
+                      "values": [{"date": dates[index], "value": sp500[index]} for index in range(len(amount))]},
+                     {"key": "Invested",
+                      "values": [{"date": dates[index], "value": amount[index]} for index in range(len(amount))]}],
+            "reference": "Invested"}
     data_ratio = [{"Close": [{"date": dates[index], "value": ratio_close[index]} for index in range(len(amount))]},
                   {"SP500": [{"date": dates[index], "value": ratio_sp500[index]} for index in range(len(amount))]}]
     return data, data_ratio

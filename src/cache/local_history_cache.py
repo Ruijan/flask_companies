@@ -21,8 +21,8 @@ def get_range(end_date, period, start_date):
         if period == "max":
             start_date = datetime(1900, 1, 1)
         else:
-            amount = int(period[0])
-            element_of_time = period[1]
+            amount = int("".join([i for i in period if i.isdigit()]))
+            element_of_time = "".join([c for c in period if not c.isdigit()])
             if element_of_time == "d":
                 start_date = end_date - timedelta(days=amount)
             elif element_of_time == "w":
@@ -113,7 +113,32 @@ class LocalHistoryCache(dict):
         temp_data = None
         if key not in self.keys():
             start = time.time()
-            temp_data = {"history": yf.Ticker(key).history(start=start_date, end=end_date),
+            if self.__source == "grep":
+                dividends = fmpsdk.historical_stock_dividend(apikey=os.environ["FINANCE_KEY"], symbol=key)
+                prices = fmpsdk.historical_price_full(apikey=os.environ["FINANCE_KEY"], symbol=key,
+                                                       series_type="line",
+                                                       from_date=start_date.strftime(Y_M_D),
+                                                       to_date=end_date.strftime(Y_M_D))
+                price_history = {(start_date + timedelta(days=x)).strftime(Y_M_D): math.nan for x in
+                                 range((end_date - start_date).days)}
+                dividends_history = {(start_date + timedelta(days=x)).strftime(Y_M_D): math.nan for x in
+                                     range((end_date - start_date).days)}
+                for payment in prices["historical"]:
+                    price_history[payment["date"]] = payment["close"]
+
+                if "historical" in dividends:
+                    for payment in dividends["historical"]:
+                        dividends_history[payment["date"]] = payment["adjDividend"]
+
+                df = pd.DataFrame(price_history.values(), index=list(price_history.keys()), columns=["Close"])
+                df2 = pd.DataFrame(dividends_history.values(), index=list(dividends_history.keys()), columns=["Dividends"])
+                result = pd.concat([df, df2], axis=1, sort=False)
+                result = result.fillna(method='ffill')
+                history = result.fillna(method='bfill')
+                history.index.name = "Date"
+            else:
+                history = yf.Ticker(key).history(start=start_date, end=end_date)
+            temp_data = {"history": history,
                          "last_update": datetime.now(),
                          "start_date": start_date,
                          "end_date": end_date}
@@ -122,12 +147,35 @@ class LocalHistoryCache(dict):
             temp_data = self[key].copy()
             diff_time = self[key]["start_date"] - start_date
             if diff_time.days > 0:
-                added_history = yf.Ticker(key).history(start=start_date,
-                                                       end=self[key]["start_date"] - timedelta(days=1))
+                if self.__source == "grep":
+                    dividends = fmpsdk.historical_stock_dividend(apikey=os.environ["FINANCE_KEY"], symbol=key)
+                    prices = fmpsdk.historical_price_full(apikey=os.environ["FINANCE_KEY"], symbol=key,
+                                                                 series_type="line",
+                                                                 from_date=start_date.strftime(Y_M_D),
+                                                                 to_date=(self[key]["start_date"] - timedelta(
+                                                                     days=1)).strftime(Y_M_D))
+                    price_history = {(start_date + timedelta(days=x)).strftime(Y_M_D): math.nan for x in
+                                     range((end_date - start_date).days)}
+                    dividends_history = {(start_date + timedelta(days=x)).strftime(Y_M_D): math.nan for x in
+                                     range((end_date - start_date).days)}
+                    for payment in prices["historical"]:
+                        price_history[payment["date"]] = payment["close"]
+                    if "historical" in dividends:
+                        for payment in dividends["historical"]:
+                            dividends_history[payment["date"]] = payment["adjDividend"]
+
+                    df = pd.DataFrame(price_history.values(), index=list(price_history.keys()), columns=["Close"])
+                    df2 = pd.DataFrame(dividends_history.values(), index=list(dividends_history.keys()), columns=["Dividends"])
+                    added_history = pd.concat([df, df2], axis=1, sort=False)
+                    added_history.index.name = "Date"
+                    added_history.index = pd.to_datetime(added_history.index)
+                    added_history.sort_index(inplace=True)
+                else:
+                    added_history = yf.Ticker(key).history(start=start_date,
+                                                           end=self[key]["start_date"] - timedelta(days=1))
                 temp_data["history"].index = pd.to_datetime(temp_data["history"].index)
                 temp_data["history"] = temp_data["history"].append(added_history).sort_values(by=["Date"],
                                                                                               ascending=True)
-
                 temp_data["start_date"] = start_date
         temp_data["history"]["Close"] = temp_data["history"]["Close"].fillna(method='ffill').fillna(method='bfill')
         temp_data["history"] = temp_data["history"].loc[~temp_data["history"].index.duplicated(keep='first')]
@@ -228,7 +276,7 @@ class LocalHistoryCache(dict):
                     if first_currency_combi in currency_tickers:
                         all_prices += [{"symbol": first_currency_combi, "price": float(fx["ask"])}]
                     elif second_currency_combi in currency_tickers:
-                        all_prices += [{"symbol": second_currency_combi, "price": 1/float(fx["ask"])}]
+                        all_prices += [{"symbol": second_currency_combi, "price": 1 / float(fx["ask"])}]
                 except AttributeError:
                     pass
 
@@ -252,8 +300,8 @@ class LocalHistoryCache(dict):
         list_currencies = {currencies[index]["symbol"].replace("/", ""): index for index in range(len(currencies)) if
                            currencies[index]}
         all_currencies_div, all_currencies_price = rearrange_data_in_dictionnary(currencies, currency_tickers,
-                                                                                      end_date, list_currencies,
-                                                                                      start_date)
+                                                                                 end_date, list_currencies,
+                                                                                 start_date)
         return all_currencies_div, all_currencies_price
 
     def retrieve_index(self, end_date, formatted_index_tickers, index_tickers, start_date):
@@ -263,7 +311,7 @@ class LocalHistoryCache(dict):
             indices = [indices]
         list_indices = {indices[index]["symbol"]: index for index in range(len(indices)) if indices[index]}
         all_indices_div, all_indices_price = rearrange_data_in_dictionnary(indices, index_tickers, end_date,
-                                                                                list_indices, start_date)
+                                                                           list_indices, start_date)
         return all_indices_div, all_indices_price
 
     def extract_dividends(self, end_date, start_date, stock_keys):
@@ -359,6 +407,3 @@ def retrieve_data_five_by_five(tickers, method, **args):
         data += temporary_data['historicalStockList'] if 'historicalStockList' in temporary_data else [temporary_data]
     print("Retrieving all data --- %s seconds ---" % (time.time() - start_time))
     return data
-
-
-
