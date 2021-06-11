@@ -171,11 +171,11 @@
         document.getElementById("description_jinja").innerText = data["description"]
         document.getElementById("price_jinja").innerText = data["price"]
         document.getElementById("pe_jinja").innerText = data["value_data"]["pe"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
-        document.getElementById("pe_jinja").title = "Sector Average: " + data["sector_stats"]["avgPERatio"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
+        document.getElementById("pe_jinja").setAttribute("data-bs-original-title", "Sector Average: " + data["sector_stats"]["avgPERatio"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1}))
         document.getElementById("pb_jinja").innerText = data["value_data"]["pb"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
-        document.getElementById("pb_jinja").title = "Sector Average: " + data["sector_stats"]["avgPBRatio"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
+        document.getElementById("pb_jinja").setAttribute("data-bs-original-title","Sector Average: " + data["sector_stats"]["avgPBRatio"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1}))
         document.getElementById("pfc_jinja").innerText = data["value_data"]["pfcf"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
-        document.getElementById("pfc_jinja").title = "Sector Average: " + data["sector_stats"]["avgPFCRatio"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1})
+        document.getElementById("pfc_jinja").setAttribute("data-bs-original-title","Sector Average: " + data["sector_stats"]["avgPFCRatio"].toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits:1}))
         document.getElementById("image_jinja").src = data["image"]
         let newsLength = data["news"].length < 10 ? data["news"].length : 10;
         let newsHTML ="<div class='row row-cols-1 row-cols-md-3 g-4'>"
