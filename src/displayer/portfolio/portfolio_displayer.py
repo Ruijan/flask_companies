@@ -216,7 +216,8 @@ def create_dividend_history(hist):
     max_date = datetime(today.year, 12, 1)
     if not hist.empty:
         min_date = min(hist.index)
-        max_date = datetime(today.year + math.floor((today.month + 6) / 12), (today.month + 6) % 12 + 1, 1)
+        max_month = (today.month + 6) if (today.month + 6) <= 12 else (today.month + 6) % 13 + 1
+        max_date = datetime(today.year + math.floor((today.month + 6) / 13),  max_month, 1)
     history = [({"tax": 0, "date": c_date, "net_amount": 0}) for c_date in
                get_list_of_dates_per_month(min_date, max_date)]
     for index, row in hist.iterrows():
